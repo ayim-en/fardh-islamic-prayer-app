@@ -1,5 +1,9 @@
 import { AnimatedTintIcon } from "@/components/AnimatedTintIcon";
-import { darkModeColors, lightModeColors, prayerThemeColors } from "@/constants/prayers";
+import {
+  darkModeColors,
+  lightModeColors,
+  prayerThemeColors,
+} from "@/constants/prayers";
 import { useThemeColors } from "@/context/ThemeContext";
 import { useAnimatedBackgroundColor } from "@/hooks/useAnimatedColor";
 import { useLocation } from "@/hooks/useLocation";
@@ -29,12 +33,15 @@ function TabBarBackground() {
 }
 
 export default function TabLayout() {
-  const { colors, setColors, themePrayer, setCurrentPrayer, isDarkMode } = useThemeColors();
+  const { colors, setColors, themePrayer, setCurrentPrayer, isDarkMode } =
+    useThemeColors();
   const { location, locationName } = useLocation();
   const { currentPrayer, prayerDict, todayISO } = usePrayerTimes(location);
 
   // isDarkMode from context already falls back to system color scheme
-  const bgColor = isDarkMode ? darkModeColors.background : lightModeColors.background;
+  const bgColor = isDarkMode
+    ? darkModeColors.background
+    : lightModeColors.background;
 
   // Update theme colors based on current prayer (only if no theme override is set)
   useEffect(() => {
@@ -84,6 +91,7 @@ export default function TabLayout() {
     <Tabs
       sceneContainerStyle={{ backgroundColor: bgColor }}
       screenOptions={{
+        lazy: false,
         headerShown: false,
         tabBarShowLabel: false,
         tabBarStyle: {

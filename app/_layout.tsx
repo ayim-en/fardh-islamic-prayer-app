@@ -5,17 +5,24 @@ import { PrayerSettingsProvider } from "@/context/PrayerSettingsContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Appearance, useColorScheme, View } from "react-native";
 import { Colors, Spacings, Typography } from "react-native-ui-lib";
 import "./global.css";
 
-// Keep splash screen visible briefly
+// Keep splash screen visible until ready
 SplashScreen.preventAutoHideAsync();
+SplashScreen.setOptions({
+  duration: 100,
+  fade: true,
+});
 
 // Get initial color scheme at module load time to prevent flash
 const initialColorScheme = Appearance.getColorScheme();
-const initialBgColor = initialColorScheme === "dark" ? darkModeColors.background : lightModeColors.background;
+const initialBgColor =
+  initialColorScheme === "dark"
+    ? darkModeColors.background
+    : lightModeColors.background;
 
 Colors.loadColors({
   primary: "#3B82F6",
@@ -38,15 +45,35 @@ Spacings.loadSpacings({
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const [appReady, setAppReady] = useState(false);
+  const [minTimePassed, setMinTimePassed] = useState(false);
 
   useEffect(() => {
-    SplashScreen.hideAsync();
+    const timer = setTimeout(() => {
+      setMinTimePassed(true);
+    }, 500);
+    return () => clearTimeout(timer);
   }, []);
 
-  const bgColor = isDark ? darkModeColors.background : lightModeColors.background;
+  useEffect(() => {
+    if (appReady && minTimePassed) {
+      SplashScreen.hideAsync();
+    }
+  }, [appReady, minTimePassed]);
+
+  const onLayoutReady = useCallback(() => {
+    setAppReady(true);
+  }, []);
+
+  const bgColor = isDark
+    ? darkModeColors.background
+    : lightModeColors.background;
 
   return (
-    <View style={{ flex: 1, backgroundColor: bgColor }}>
+    <View
+      style={{ flex: 1, backgroundColor: bgColor }}
+      onLayout={onLayoutReady}
+    >
       <PrayerSettingsProvider>
         <CalendarSettingsProvider>
           <NotificationSettingsProvider>

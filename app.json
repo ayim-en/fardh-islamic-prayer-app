@@ -4,7 +4,7 @@
     "slug": "fardh",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/fardh-icon.png",
     "scheme": "fardh",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -25,9 +25,8 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "foregroundImage": "./assets/images/fardh-icon.png",
+        "monochromeImage": "./assets/images/fardh-icon.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
@@ -49,11 +48,13 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/fardh-light.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",
+          "enableFullScreenImage_legacy": false,
           "dark": {
+            "image": "./assets/images/fardh-dark.png",
             "backgroundColor": "#1a1a2e"
           }
         }
