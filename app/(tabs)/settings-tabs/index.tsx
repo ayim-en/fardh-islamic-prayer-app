@@ -160,7 +160,7 @@ export default function SettingsHome() {
     {
       id: "notifications",
       title: "Notifications",
-      icon: require("../../../assets/images/prayer-pro-icons/home-page/icon-notify-on.png"),
+      icon: require("../../../assets/images/prayer-pro-icons/settings-tab/settings-notifications.png"),
       data: [
         {
           id: "notifications-content",

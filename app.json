@@ -22,6 +22,10 @@
         ]
       }
     },
+    "notification": {
+      "icon": "./assets/images/fardh-icon.png",
+      "color": "#568FAF"
+    },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",

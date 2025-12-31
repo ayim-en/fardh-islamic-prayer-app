@@ -131,7 +131,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <AnimatedTintIcon
               source={require("../../assets/images/prayer-pro-icons/bottom-tab/icon-compass.png")}
-              size={size}
+              size={28}
               tintColor={color}
             />
           ),
@@ -144,7 +144,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <AnimatedTintIcon
               source={require("../../assets/images/prayer-pro-icons/bottom-tab/icon-calendar.png")}
-              size={size}
+              size={22}
               tintColor={color}
             />
           ),
