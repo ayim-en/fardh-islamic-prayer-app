@@ -13,6 +13,7 @@ import { useCalendarSettings } from "@/context/CalendarSettingsContext";
 import { useNotificationSettings } from "@/context/NotificationSettingsContext";
 import { usePrayerSettings } from "@/context/PrayerSettingsContext";
 import { useThemeColors } from "@/context/ThemeContext";
+import { useWalkthrough } from "@/context/WalkthroughContext";
 import {
   useAnimatedBackgroundColor,
   useAnimatedTextColor,
@@ -57,6 +58,7 @@ export default function SettingsHome() {
   const { settings: calendarSettings, updateSettings: updateCalendarSettings } =
     useCalendarSettings();
   const { masterToggle, toggleMasterNotifications } = useNotificationSettings();
+  const { resetWalkthrough } = useWalkthrough();
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set()
   );
@@ -317,6 +319,15 @@ export default function SettingsHome() {
                 </Animated.Text>
                 !
               </Animated.Text>
+              <Pressable
+                onPress={resetWalkthrough}
+                className="mt-2 py-3 px-4 rounded-xl items-center"
+                style={{ backgroundColor: colors.active }}
+              >
+                <Animated.Text className="text-white text-base font-semibold">
+                  Replay Walkthrough
+                </Animated.Text>
+              </Pressable>
             </View>
           ),
         },

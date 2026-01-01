@@ -1,8 +1,10 @@
+import { Walkthrough } from "@/components/Walkthrough";
 import { darkModeColors, lightModeColors } from "@/constants/prayers";
 import { CalendarSettingsProvider } from "@/context/CalendarSettingsContext";
 import { NotificationSettingsProvider } from "@/context/NotificationSettingsContext";
 import { PrayerSettingsProvider } from "@/context/PrayerSettingsContext";
 import { ThemeProvider } from "@/context/ThemeContext";
+import { WalkthroughProvider, useWalkthrough } from "@/context/WalkthroughContext";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useCallback, useEffect, useState } from "react";
@@ -42,11 +44,12 @@ Spacings.loadSpacings({
   card: 8,
 });
 
-export default function RootLayout() {
+function RootLayoutContent() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const [appReady, setAppReady] = useState(false);
   const [minTimePassed, setMinTimePassed] = useState(false);
+  const { showWalkthrough, completeWalkthrough } = useWalkthrough();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -56,10 +59,10 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    if (appReady && minTimePassed) {
+    if (appReady && minTimePassed && showWalkthrough !== null) {
       SplashScreen.hideAsync();
     }
-  }, [appReady, minTimePassed]);
+  }, [appReady, minTimePassed, showWalkthrough]);
 
   const onLayoutReady = useCallback(() => {
     setAppReady(true);
@@ -68,6 +71,15 @@ export default function RootLayout() {
   const bgColor = isDark
     ? darkModeColors.background
     : lightModeColors.background;
+
+  // Show walkthrough on first launch
+  if (showWalkthrough) {
+    return (
+      <View style={{ flex: 1 }} onLayout={onLayoutReady}>
+        <Walkthrough onComplete={completeWalkthrough} />
+      </View>
+    );
+  }
 
   return (
     <View
@@ -91,5 +103,13 @@ export default function RootLayout() {
         </CalendarSettingsProvider>
       </PrayerSettingsProvider>
     </View>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <WalkthroughProvider>
+      <RootLayoutContent />
+    </WalkthroughProvider>
   );
 }
