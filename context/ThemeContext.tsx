@@ -4,6 +4,9 @@ import React, { createContext, useCallback, useContext, useEffect, useState } fr
 import { useColorScheme } from "react-native";
 
 const THEME_STORAGE_KEY = "themePrayer";
+const APP_ICON_STORAGE_KEY = "appIcon";
+
+export type AppIconType = "default" | "light" | "dark";
 
 interface ThemeColors {
   active: string;
@@ -20,6 +23,9 @@ interface ThemeContextType {
   isDarkMode: boolean;
   currentPrayer: Prayer | null;
   setCurrentPrayer: (prayer: Prayer | null) => void;
+  // App icon preference
+  appIcon: AppIconType;
+  setAppIcon: (icon: AppIconType) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -45,21 +51,30 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
   // Track the current prayer for dark mode calculation
   const [currentPrayer, setCurrentPrayer] = useState<Prayer | null>(null);
 
-  // Load saved theme from AsyncStorage on mount
+  // App icon preference
+  const [appIcon, setAppIcon] = useState<AppIconType>("default");
+
+  // Load saved theme and app icon from AsyncStorage on mount
   useEffect(() => {
-    const loadTheme = async () => {
+    const loadSettings = async () => {
       try {
-        const saved = await AsyncStorage.getItem(THEME_STORAGE_KEY);
-        if (saved) {
-          setThemePrayer(saved as Prayer);
+        const [savedTheme, savedIcon] = await Promise.all([
+          AsyncStorage.getItem(THEME_STORAGE_KEY),
+          AsyncStorage.getItem(APP_ICON_STORAGE_KEY),
+        ]);
+        if (savedTheme) {
+          setThemePrayer(savedTheme as Prayer);
+        }
+        if (savedIcon) {
+          setAppIcon(savedIcon as AppIconType);
         }
       } catch (error) {
-        console.error("Error loading theme:", error);
+        console.error("Error loading settings:", error);
       } finally {
         setThemeLoaded(true);
       }
     };
-    loadTheme();
+    loadSettings();
   }, []);
 
   // Save theme to AsyncStorage when it changes
@@ -78,6 +93,19 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     };
     saveTheme();
   }, [themePrayer, themeLoaded]);
+
+  // Save app icon preference to AsyncStorage when it changes
+  useEffect(() => {
+    if (!themeLoaded) return;
+    const saveAppIcon = async () => {
+      try {
+        await AsyncStorage.setItem(APP_ICON_STORAGE_KEY, appIcon);
+      } catch (error) {
+        console.error("Error saving app icon:", error);
+      }
+    };
+    saveAppIcon();
+  }, [appIcon, themeLoaded]);
 
   // Calculate dark mode based on theme prayer or current prayer
   // Falls back to system color scheme when no prayer is loaded
@@ -113,6 +141,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
         isDarkMode,
         currentPrayer,
         setCurrentPrayer,
+        appIcon,
+        setAppIcon,
       }}
     >
       {children}

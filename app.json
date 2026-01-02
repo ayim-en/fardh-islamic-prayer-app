@@ -72,6 +72,19 @@
           "isAndroidBackgroundLocationEnabled": false
         }
       ],
+      [
+        "expo-dynamic-app-icon",
+        {
+          "light": {
+            "image": "./assets/images/fardh-light.png",
+            "prerendered": true
+          },
+          "dark": {
+            "image": "./assets/images/fardh-dark.png",
+            "prerendered": true
+          }
+        }
+      ],
       "@bacons/apple-targets"
     ],
     "experiments": {

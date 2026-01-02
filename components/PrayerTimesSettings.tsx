@@ -405,7 +405,7 @@ export const PrayerTimesSettings = ({
             })}
             {/* Save/Discard buttons */}
             {hasUnsavedChanges && (
-              <View className="flex-row justify-end gap-3 mt-4 pl-4">
+              <View className="flex-row justify-center gap-3 mt-4">
                 <TouchableOpacity
                   onPress={discardChanges}
                   className="px-4 py-2 rounded-lg"

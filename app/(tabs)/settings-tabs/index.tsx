@@ -52,7 +52,7 @@ type SettingsSection = {
 type PickerType = "method" | "school" | "latitude" | "tune" | "calendarMethod";
 
 export default function SettingsHome() {
-  const { colors, isDarkMode, currentPrayer, themePrayer, setThemePrayer } =
+  const { colors, isDarkMode, currentPrayer, themePrayer, setThemePrayer, appIcon, setAppIcon } =
     useThemeColors();
   const { settings, updateSettings, updateAllTune } = usePrayerSettings();
   const { settings: calendarSettings, updateSettings: updateCalendarSettings } =
@@ -152,6 +152,8 @@ export default function SettingsHome() {
             <ThemesSettings
               themePrayer={themePrayer}
               setThemePrayer={setThemePrayer}
+              appIcon={appIcon}
+              setAppIconPref={setAppIcon}
               colors={colors}
               isDarkMode={isDarkMode}
             />
