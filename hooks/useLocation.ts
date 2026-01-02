@@ -17,9 +17,13 @@ export const useLocation = () => {
       setCityName("Loading...");
       setLocationName("Loading location...");
 
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        setError("Permission to access location was denied");
+      // Check current permission status without prompting
+      const { status: existingStatus } = await Location.getForegroundPermissionsAsync();
+
+      if (existingStatus !== "granted") {
+        setError("Location permission not granted");
+        setCityName("Location required");
+        setLocationName("Enable location in settings");
         return;
       }
 

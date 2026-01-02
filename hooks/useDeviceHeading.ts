@@ -31,7 +31,8 @@ export const useDeviceHeading = (): SharedValue<number> => {
 
     const startWatchingHeading = async () => {
       try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
+        // Check current permission status without prompting
+        const { status } = await Location.getForegroundPermissionsAsync();
         if (status !== "granted") {
           console.warn("Location permission not granted for compass");
           return;

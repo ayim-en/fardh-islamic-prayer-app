@@ -1,27 +1,27 @@
-import { prayerThemeColors } from "@/constants/prayers";
+import { prayerThemeColors, Prayers } from "@/constants/prayers";
+import { DEFAULT_PRAYER_SETTINGS, SCHOOLS } from "@/constants/prayerSettings";
+import { requestNotificationPermissions } from "@/utils/notificationService";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Location from "expo-location";
+import { DeviceMotion } from "expo-sensors";
 import React, { useState } from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ImageBackground,
-  Image,
-} from "react-native";
+import { Image, Text, TouchableOpacity, View } from "react-native";
+import { AnimatedCrossfadeImage } from "./AnimatedCrossfadeImage";
 
 const WALKTHROUGH_STEPS = [
   {
     id: "Fajr",
-    title: "Salaam",
+    title: "السلام عليكم ",
     description:
-      "We built Fardh with a simple intention: to create a prayer app that honors the sanctity of Salah. No distractions, just devotion.",
+      "We built Fardh with a simple intention: to create a minimal prayer app that helps you focus on Salah. No distractions, just devotion.",
     image: require("@/assets/images/prayer-pro-bg/prayer-pro-bg-fajr.png"),
     illustration: require("@/assets/images/walkthrough/walkthrough-welcome.png"),
   },
   {
     id: "Sunrise",
-    title: "Purely for Allah",
+    title: "Ad-Free Experience",
     description:
-      "This is a Sadaqah Jariyah project. It is 100% free with no ads, forever.",
+      "This is a Sadaqah Jariyah project. It is 100% free with no ads, forever. We only ask that keep us in your du’as! ",
     image: require("@/assets/images/prayer-pro-bg/prayer-pro-bg-sunrise.png"),
     illustration: require("@/assets/images/walkthrough/walkthrough-ads.png"),
   },
@@ -38,9 +38,9 @@ const WALKTHROUGH_STEPS = [
   },
   {
     id: "Asr",
-    title: "Privacy-First",
+    title: "Your Location",
     description:
-      "We only access your location to calculate accurate prayer times for your city. This data stays on your device and is never sold or tracked.",
+      "We use your location to calculate accurate prayer times and motion sensors to power the Qibla compass. This data stays on your device and is never shared.",
     image: require("@/assets/images/prayer-pro-bg/prayer-pro-bg-asr.png"),
     illustration: require("@/assets/images/walkthrough/walkthrough-location.png"),
   },
@@ -48,7 +48,7 @@ const WALKTHROUGH_STEPS = [
     id: "Maghrib",
     title: "Never Miss a Prayer",
     description:
-      "Get notified before each prayer time so you can prepare and pray on time.",
+      "Get notified before each prayer time so you can prepare and pray on time. Individual notifications can be toggled for each prayer.",
     image: require("@/assets/images/prayer-pro-bg/prayer-pro-bg-maghrib.png"),
     illustration: require("@/assets/images/walkthrough/walkthrough-notifications.png"),
   },
@@ -56,7 +56,7 @@ const WALKTHROUGH_STEPS = [
     id: "Isha",
     title: "Your Madhab",
     description:
-      "Choose your preferred calculation method and school of thought for accurate prayer times.",
+      "Select your school of thought for Asr calculation. You can change the calculation method and other settings anytime in Settings.",
     image: require("@/assets/images/prayer-pro-bg/prayer-pro-bg-isha.png"),
     illustration: require("@/assets/images/walkthrough/walkthrough-madhab.png"),
   },
@@ -68,9 +68,44 @@ interface WalkthroughProps {
 
 export function Walkthrough({ onComplete }: WalkthroughProps) {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [locationGranted, setLocationGranted] = useState(false);
+  const [motionGranted, setMotionGranted] = useState(false);
+  const [notificationsGranted, setNotificationsGranted] = useState(false);
+  const [selectedSchool, setSelectedSchool] = useState<0 | 1>(DEFAULT_PRAYER_SETTINGS.school);
 
   const isLastStep = activeIndex === WALKTHROUGH_STEPS.length - 1;
   const isFirstStep = activeIndex === 0;
+
+  const saveSchool = async (school: 0 | 1) => {
+    const settings = {
+      ...DEFAULT_PRAYER_SETTINGS,
+      school,
+    };
+    await AsyncStorage.setItem("prayerSettings", JSON.stringify(settings));
+  };
+
+  const requestLocationAndMotionPermissions = async () => {
+    const [locationResult, motionResult] = await Promise.all([
+      Location.requestForegroundPermissionsAsync(),
+      DeviceMotion.requestPermissionsAsync(),
+    ]);
+    setLocationGranted(locationResult.status === "granted");
+    setMotionGranted(motionResult.status === "granted");
+  };
+
+  const requestNotificationPermission = async () => {
+    const granted = await requestNotificationPermissions();
+    if (granted) {
+      setNotificationsGranted(true);
+      // Enable master toggle and all prayers in AsyncStorage
+      await AsyncStorage.setItem("notificationsMasterToggle", JSON.stringify(true));
+      const allEnabled: Record<string, boolean> = {};
+      Prayers.forEach((prayer) => {
+        allEnabled[prayer] = true;
+      });
+      await AsyncStorage.setItem("prayerNotifications", JSON.stringify(allEnabled));
+    }
+  };
 
   const goToNextStep = () => {
     if (isLastStep) {
@@ -92,12 +127,12 @@ export function Walkthrough({ onComplete }: WalkthroughProps) {
 
   return (
     <View className="flex-1">
-      <ImageBackground
+      <AnimatedCrossfadeImage
         source={currentStep.image}
-        className="flex-1 w-full h-full"
+        style={{ position: "absolute", width: "100%", height: "100%" }}
         resizeMode="cover"
-      >
-        <View className="flex-1 justify-between pt-16">
+      />
+      <View className="flex-1 justify-between pt-16">
           {/* Progress bar */}
           <View className="mx-20 h-3 bg-white/30 rounded-full overflow-hidden">
             <View
@@ -110,11 +145,26 @@ export function Walkthrough({ onComplete }: WalkthroughProps) {
 
           {/* Content */}
           <View className="flex-1 justify-end">
-            <View className="bg-white rounded-t-3xl px-6 pt-10 pb-12 h-[80%]">
-              <Text className="text-4xl font-bold text-neutral-900 text-left mb-4">
+            <View
+              className="rounded-t-3xl px-6 pt-10 pb-12 h-[80%]"
+              style={{
+                backgroundColor: currentStep.id === "Maghrib" || currentStep.id === "Isha" ? "#1a1a2e" : "#ffffff",
+              }}
+            >
+              <Text
+                className="text-4xl font-bold text-left mb-4"
+                style={{
+                  color: currentStep.id === "Maghrib" || currentStep.id === "Isha" ? "#ffffff" : "#171717",
+                }}
+              >
                 {currentStep.title}
               </Text>
-              <Text className="text-base text-neutral-600 text-left leading-6">
+              <Text
+                className="text-base text-left leading-6"
+                style={{
+                  color: currentStep.id === "Maghrib" || currentStep.id === "Isha" ? "#e0e0e0" : "#525252",
+                }}
+              >
                 {currentStep.description}
               </Text>
               {currentStep.illustrations ? (
@@ -129,11 +179,60 @@ export function Walkthrough({ onComplete }: WalkthroughProps) {
                   ))}
                 </View>
               ) : currentStep.illustration ? (
-                <Image
-                  source={currentStep.illustration}
-                  className="w-[328px] h-[328px] self-center mb-6 mt-4"
-                  resizeMode="contain"
-                />
+                <View className="items-center">
+                  <Image
+                    source={currentStep.illustration}
+                    className={`self-center mb-4 ${currentStep.id === "Isha" ? "-mt-4" : currentStep.id === "Fajr" ? "mt-8" : "mt-4"} ${currentStep.id === "Asr" || currentStep.id === "Maghrib" ? "w-[260px] h-[260px]" : currentStep.id === "Isha" ? "w-[280px] h-[280px]" : "w-[328px] h-[328px]"}`}
+                    resizeMode="contain"
+                  />
+                  {currentStep.id === "Asr" && (
+                    <TouchableOpacity
+                      className="py-3 px-8 rounded-xl self-center"
+                      style={{ backgroundColor: locationGranted && motionGranted ? themeColors?.active : themeColors?.inactive }}
+                      onPress={requestLocationAndMotionPermissions}
+                      disabled={locationGranted && motionGranted}
+                    >
+                      <Text className="text-white text-base font-semibold">
+                        {locationGranted && motionGranted ? "Permissions Enabled ✓" : "Enable Permissions"}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                  {currentStep.id === "Maghrib" && (
+                    <TouchableOpacity
+                      className="py-3 px-8 rounded-xl self-center"
+                      style={{ backgroundColor: notificationsGranted ? themeColors?.active : themeColors?.inactive }}
+                      onPress={requestNotificationPermission}
+                      disabled={notificationsGranted}
+                    >
+                      <Text className="text-white text-base font-semibold">
+                        {notificationsGranted ? "Notifications Enabled ✓" : "Enable Notifications"}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                  {currentStep.id === "Isha" && (
+                    <View className="gap-2 -mt-4 items-center">
+                      {SCHOOLS.map((school) => (
+                        <TouchableOpacity
+                          key={school.id}
+                          className="py-3 px-8 rounded-lg"
+                          style={{
+                            backgroundColor: selectedSchool === school.id ? themeColors?.active : "transparent",
+                          }}
+                          onPress={async () => {
+                            setSelectedSchool(school.id);
+                            await saveSchool(school.id);
+                          }}
+                        >
+                          <Text
+                            className={`text-base text-center ${selectedSchool === school.id ? "text-white" : "text-neutral-300"}`}
+                          >
+                            {school.name} - {school.description}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </View>
               ) : null}
 
               {/* Navigation buttons */}
@@ -160,7 +259,6 @@ export function Walkthrough({ onComplete }: WalkthroughProps) {
             </View>
           </View>
         </View>
-      </ImageBackground>
-    </View>
+      </View>
   );
 }

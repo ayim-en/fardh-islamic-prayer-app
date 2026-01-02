@@ -14,7 +14,8 @@
       "appleTeamId": "UCA6F7FD9U",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSLocationWhenInUseUsageDescription": "This app needs access to your location to show accurate prayer times for your area."
+        "NSLocationWhenInUseUsageDescription": "This app needs access to your location to show accurate prayer times for your area.",
+        "NSMotionUsageDescription": "This app uses motion sensors to provide an accurate Qibla compass direction."
       },
       "entitlements": {
         "com.apple.security.application-groups": [
