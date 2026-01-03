@@ -70,8 +70,8 @@ export const formatDate = (isoDate: string): string => {
   const day = Number(dayStr);
   const date = new Date(year, month - 1, day);
   const options: Intl.DateTimeFormatOptions = {
-    weekday: "short",
-    month: "short",
+    weekday: "long",
+    month: "long",
     day: "numeric",
   };
   return date.toLocaleDateString("en-US", options);

@@ -75,6 +75,10 @@
       [
         "expo-dynamic-app-icon",
         {
+          "default": {
+            "image": "./assets/images/fardh-icon.png",
+            "prerendered": true
+          },
           "light": {
             "image": "./assets/images/fardh-light.png",
             "prerendered": true

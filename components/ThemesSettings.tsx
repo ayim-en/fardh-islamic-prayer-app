@@ -61,12 +61,7 @@ export const ThemesSettings = ({
     // Apply icon change on iOS
     if (Platform.OS === "ios" && localIcon !== appIcon) {
       try {
-        // For default, pass null to reset; for alternate icons, pass the icon name
-        if (localIcon === "default") {
-          setAppIcon(null as unknown as string);
-        } else {
-          setAppIcon(localIcon);
-        }
+        setAppIcon(localIcon);
       } catch {
         // Icon change not available
       }
