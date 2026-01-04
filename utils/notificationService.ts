@@ -1,9 +1,19 @@
 import { Prayers } from "@/constants/prayers";
 import { PrayerDict } from "@/prayer-api/prayerTimesAPI";
 import { getLocalISODate } from "@/utils/calendarHelpers";
-import { parsePrayerTime } from "@/utils/prayerHelpers";
+import { cleanTimeString, parsePrayerTime } from "@/utils/prayerHelpers";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
+
+// Unique descriptions for each prayer
+const PRAYER_DESCRIPTIONS: Record<string, string> = {
+  Fajr: "The two rak'ahs of Fajr are better than the world and all it contains.",
+  Sunrise: "The sun has risen, may your day be filled with barakah.",
+  Dhuhr: "Take a break for the one who gave you this day",
+  Asr: "Don't let work cost you your prayer, guard your Asr",
+  Maghrib: "Day turns to night, find your light in Maghrib",
+  Isha: "Finish your day strong, let your final action be a testimony of faith.",
+};
 
 // Configure how notifications are handled when the app is in the foreground
 Notifications.setNotificationHandler({
@@ -48,7 +58,8 @@ export const requestNotificationPermissions = async (): Promise<boolean> => {
 export const schedulePrayerNotification = async (
   prayer: string,
   prayerTime: Date,
-  isoDate: string
+  isoDate: string,
+  timeString: string
 ): Promise<string | null> => {
   try {
     // Don't schedule if the time has already passed
@@ -56,12 +67,10 @@ export const schedulePrayerNotification = async (
       return null;
     }
 
-    // Sunrise is not a prayer, so use different wording
-    const isSunrise = prayer === "Sunrise";
-    const title = isSunrise ? "Sunrise" : `${prayer} Prayer Time`;
-    const body = isSunrise
-      ? "The sun is rising; The time for Fajr prayer has passed"
-      : `It's time for ${prayer} prayer`;
+    // Format: "{PRAYER} At {PRAYER_TIME}"
+    const formattedTime = cleanTimeString(timeString);
+    const title = `${prayer} At ${formattedTime}`;
+    const body = PRAYER_DESCRIPTIONS[prayer] || `It's time for ${prayer}`;
 
     const identifier = await Notifications.scheduleNotificationAsync({
       content: {
@@ -133,7 +142,7 @@ export const scheduleAllPrayerNotifications = async (
       if (!timeString) continue;
 
       const prayerTime = parsePrayerTime(isoDate, timeString);
-      await schedulePrayerNotification(prayer, prayerTime, isoDate);
+      await schedulePrayerNotification(prayer, prayerTime, isoDate, timeString);
     }
   }
 
