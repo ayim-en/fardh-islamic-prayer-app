@@ -1,9 +1,5 @@
 import { HOLIDAY_DESCRIPTIONS } from "@/constants/holidays";
 import { darkModeColors, lightModeColors } from "@/constants/prayers";
-import {
-  useAnimatedBackgroundColor,
-  useAnimatedTextColor,
-} from "@/hooks/useAnimatedColor";
 import React, { useEffect, useRef } from "react";
 import {
   Animated,
@@ -12,9 +8,9 @@ import {
   Modal,
   Pressable,
   ScrollView,
+  Text,
   View,
 } from "react-native";
-import Reanimated from "react-native-reanimated";
 
 // Animation constants
 const ANIMATION_DURATION_IN = 250;
@@ -38,14 +34,6 @@ export function HolidayBottomSheet({
 }: HolidayBottomSheetProps) {
   // Colors based on dark mode
   const themeColors = isDarkMode ? darkModeColors : lightModeColors;
-
-  // Animated styles
-  const animatedBgStyle = useAnimatedBackgroundColor(themeColors.background);
-  const animatedHandleStyle = useAnimatedBackgroundColor(colors.inactive);
-  const animatedActiveTextStyle = useAnimatedTextColor(colors.active);
-  const animatedInactiveTextStyle = useAnimatedTextColor(colors.inactive);
-  const animatedSectionTitleStyle = useAnimatedTextColor(themeColors.sectionTitle);
-  const animatedContentTextStyle = useAnimatedTextColor(themeColors.text);
 
   const sheetAnim = useRef(new Animated.Value(0)).current;
   const { height: screenHeight } = Dimensions.get("window");
@@ -107,27 +95,27 @@ export function HolidayBottomSheet({
         />
         <View className="absolute left-0 right-0" style={{ bottom: 0 }}>
           <Animated.View style={{ transform: [{ translateY: sheetAnim }] }}>
-            <Reanimated.View
+            <View
               className="rounded-t-3xl p-5"
-              style={animatedBgStyle}
+              style={{ backgroundColor: themeColors.background }}
             >
               {/* Handle indicator */}
               <View className="mb-2 items-center">
-                <Reanimated.View
+                <View
                   className="h-1.5 w-12 rounded-full"
-                  style={animatedHandleStyle}
+                  style={{ backgroundColor: colors.inactive }}
                   accessibilityLabel="Swipe indicator"
                 />
               </View>
 
               {/* Title */}
-              <Reanimated.Text
+              <Text
                 className="text-2xl font-bold mt-3"
-                style={animatedActiveTextStyle}
+                style={{ color: colors.active }}
                 accessibilityRole="header"
               >
                 {title}
-              </Reanimated.Text>
+              </Text>
 
               {/* Content */}
               <ScrollView
@@ -140,21 +128,21 @@ export function HolidayBottomSheet({
                 {holidays.map((name: string, idx: number) => (
                   <View key={`${name}-${idx}`} className="mb-6">
                     {holidays.length > 1 && (
-                      <Reanimated.Text
+                      <Text
                         className="text-lg font-semibold mb-1"
-                        style={animatedSectionTitleStyle}
+                        style={{ color: themeColors.sectionTitle }}
                         accessibilityRole="header"
                       >
                         {name}
-                      </Reanimated.Text>
+                      </Text>
                     )}
-                    <Reanimated.Text
+                    <Text
                       className="text-base"
-                      style={animatedContentTextStyle}
+                      style={{ color: themeColors.text }}
                     >
                       {HOLIDAY_DESCRIPTIONS[name] ||
                         "Description not available."}
-                    </Reanimated.Text>
+                    </Text>
                   </View>
                 ))}
               </ScrollView>
@@ -166,15 +154,15 @@ export function HolidayBottomSheet({
                   accessibilityRole="button"
                   accessibilityLabel="Close holiday details"
                 >
-                  <Reanimated.Text
+                  <Text
                     className="text-center font-semibold"
-                    style={animatedInactiveTextStyle}
+                    style={{ color: colors.inactive }}
                   >
                     Close
-                  </Reanimated.Text>
+                  </Text>
                 </Pressable>
               </View>
-            </Reanimated.View>
+            </View>
           </Animated.View>
         </View>
       </View>
