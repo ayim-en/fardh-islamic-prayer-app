@@ -54,9 +54,12 @@ export const PrayerTimesSettings = ({
   }, [isTuneExpanded, settings.tune]);
 
   // Update local tune value (doesn't save to storage)
-  const updateLocalTune = useCallback((prayer: TunablePrayer, value: number) => {
-    setLocalTune((prev) => ({ ...prev, [prayer]: value }));
-  }, []);
+  const updateLocalTune = useCallback(
+    (prayer: TunablePrayer, value: number) => {
+      setLocalTune((prev) => ({ ...prev, [prayer]: value }));
+    },
+    []
+  );
 
   // Save all tune changes at once
   const saveChanges = useCallback(async () => {
@@ -84,10 +87,7 @@ export const PrayerTimesSettings = ({
             >
               Calculation Method
             </Animated.Text>
-            <Animated.Text
-              className="text-sm"
-              style={animatedActiveTextStyle}
-            >
+            <Animated.Text className="text-sm" style={animatedActiveTextStyle}>
               {CALCULATION_METHODS.find((m) => m.id === settings.method)
                 ?.name || "Select Method"}
             </Animated.Text>
@@ -96,9 +96,7 @@ export const PrayerTimesSettings = ({
             style={{
               transform: [
                 {
-                  rotate: expandedPickers.has("method")
-                    ? "180deg"
-                    : "0deg",
+                  rotate: expandedPickers.has("method") ? "180deg" : "0deg",
                 },
               ],
             }}
@@ -129,7 +127,11 @@ export const PrayerTimesSettings = ({
                 >
                   <Animated.Text
                     className="flex-1"
-                    style={isSelected ? animatedActiveTextStyle : animatedSecondaryTextStyle}
+                    style={
+                      isSelected
+                        ? animatedActiveTextStyle
+                        : animatedSecondaryTextStyle
+                    }
                   >
                     {method.name}
                   </Animated.Text>
@@ -145,7 +147,10 @@ export const PrayerTimesSettings = ({
         )}
       </View>
 
-      <Animated.View className="my-2" style={[{ height: 1 }, animatedSeparatorStyle]} />
+      <Animated.View
+        className="my-2"
+        style={[{ height: 1 }, animatedSeparatorStyle]}
+      />
 
       {/* School Dropdown */}
       <View>
@@ -158,12 +163,9 @@ export const PrayerTimesSettings = ({
               className="text-base font-medium"
               style={animatedTextStyle}
             >
-              School (Asr Calculation)
+              Asr Calculation
             </Animated.Text>
-            <Animated.Text
-              className="text-sm"
-              style={animatedActiveTextStyle}
-            >
+            <Animated.Text className="text-sm" style={animatedActiveTextStyle}>
               {SCHOOLS.find((s) => s.id === settings.school)?.name ||
                 "Select School"}
             </Animated.Text>
@@ -172,9 +174,7 @@ export const PrayerTimesSettings = ({
             style={{
               transform: [
                 {
-                  rotate: expandedPickers.has("school")
-                    ? "180deg"
-                    : "0deg",
+                  rotate: expandedPickers.has("school") ? "180deg" : "0deg",
                 },
               ],
             }}
@@ -201,7 +201,11 @@ export const PrayerTimesSettings = ({
                 >
                   <View className="flex-1">
                     <Animated.Text
-                      style={isSelected ? animatedActiveTextStyle : animatedSecondaryTextStyle}
+                      style={
+                        isSelected
+                          ? animatedActiveTextStyle
+                          : animatedSecondaryTextStyle
+                      }
                     >
                       {school.name}
                     </Animated.Text>
@@ -224,7 +228,10 @@ export const PrayerTimesSettings = ({
         )}
       </View>
 
-      <Animated.View className="my-2" style={[{ height: 1 }, animatedSeparatorStyle]} />
+      <Animated.View
+        className="my-2"
+        style={[{ height: 1 }, animatedSeparatorStyle]}
+      />
 
       {/* Latitude Adjustment Dropdown */}
       <View>
@@ -239,10 +246,7 @@ export const PrayerTimesSettings = ({
             >
               High Latitude Adjustment
             </Animated.Text>
-            <Animated.Text
-              className="text-sm"
-              style={animatedActiveTextStyle}
-            >
+            <Animated.Text className="text-sm" style={animatedActiveTextStyle}>
               {LATITUDE_ADJUSTMENTS.find(
                 (l) => l.id === settings.latitudeAdjustmentMethod
               )?.name || "None"}
@@ -252,9 +256,7 @@ export const PrayerTimesSettings = ({
             style={{
               transform: [
                 {
-                  rotate: expandedPickers.has("latitude")
-                    ? "180deg"
-                    : "0deg",
+                  rotate: expandedPickers.has("latitude") ? "180deg" : "0deg",
                 },
               ],
             }}
@@ -269,7 +271,8 @@ export const PrayerTimesSettings = ({
         {expandedPickers.has("latitude") && (
           <View className="mt-1">
             {LATITUDE_ADJUSTMENTS.map((adjustment) => {
-              const isSelected = settings.latitudeAdjustmentMethod === adjustment.id;
+              const isSelected =
+                settings.latitudeAdjustmentMethod === adjustment.id;
               return (
                 <TouchableOpacity
                   key={adjustment.id ?? "none"}
@@ -283,7 +286,11 @@ export const PrayerTimesSettings = ({
                 >
                   <View className="flex-1">
                     <Animated.Text
-                      style={isSelected ? animatedActiveTextStyle : animatedSecondaryTextStyle}
+                      style={
+                        isSelected
+                          ? animatedActiveTextStyle
+                          : animatedSecondaryTextStyle
+                      }
                     >
                       {adjustment.name}
                     </Animated.Text>
@@ -306,7 +313,10 @@ export const PrayerTimesSettings = ({
         )}
       </View>
 
-      <Animated.View className="my-2" style={[{ height: 1 }, animatedSeparatorStyle]} />
+      <Animated.View
+        className="my-2"
+        style={[{ height: 1 }, animatedSeparatorStyle]}
+      />
 
       {/* Custom Adjustments (Tune) Dropdown */}
       <View>
@@ -321,23 +331,20 @@ export const PrayerTimesSettings = ({
             >
               Custom Adjustments
             </Animated.Text>
-            <Animated.Text
-              className="text-sm"
-              style={animatedActiveTextStyle}
-            >
-              ({TUNABLE_PRAYERS.map((p) => {
+            <Animated.Text className="text-sm" style={animatedActiveTextStyle}>
+              (
+              {TUNABLE_PRAYERS.map((p) => {
                 const v = settings.tune[p.key];
                 return v > 0 ? `+${v}` : `${v}`;
-              }).join(", ")})
+              }).join(", ")}
+              )
             </Animated.Text>
           </View>
           <Animated.View
             style={{
               transform: [
                 {
-                  rotate: expandedPickers.has("tune")
-                    ? "180deg"
-                    : "0deg",
+                  rotate: expandedPickers.has("tune") ? "180deg" : "0deg",
                 },
               ],
             }}
@@ -360,14 +367,21 @@ export const PrayerTimesSettings = ({
                   className="flex-row items-center justify-between py-2 pl-4"
                 >
                   <Animated.Text
-                    style={hasAdjustment ? animatedActiveTextStyle : animatedSecondaryTextStyle}
+                    style={
+                      hasAdjustment
+                        ? animatedActiveTextStyle
+                        : animatedSecondaryTextStyle
+                    }
                   >
                     {prayer.label}
                   </Animated.Text>
                   <View className="flex-row items-center">
                     <TouchableOpacity
                       onPress={() =>
-                        updateLocalTune(prayer.key as TunablePrayer, tuneValue - 1)
+                        updateLocalTune(
+                          prayer.key as TunablePrayer,
+                          tuneValue - 1
+                        )
                       }
                       className="w-7 h-7 rounded-full items-center justify-center"
                       style={{ backgroundColor: colors.active + "20" }}
@@ -381,13 +395,20 @@ export const PrayerTimesSettings = ({
                     </TouchableOpacity>
                     <Animated.Text
                       className="w-10 text-center font-medium"
-                      style={hasAdjustment ? animatedActiveTextStyle : animatedSecondaryTextStyle}
+                      style={
+                        hasAdjustment
+                          ? animatedActiveTextStyle
+                          : animatedSecondaryTextStyle
+                      }
                     >
                       {tuneValue > 0 ? `+${tuneValue}` : tuneValue}
                     </Animated.Text>
                     <TouchableOpacity
                       onPress={() =>
-                        updateLocalTune(prayer.key as TunablePrayer, tuneValue + 1)
+                        updateLocalTune(
+                          prayer.key as TunablePrayer,
+                          tuneValue + 1
+                        )
                       }
                       className="w-7 h-7 rounded-full items-center justify-center"
                       style={{ backgroundColor: colors.active + "20" }}
