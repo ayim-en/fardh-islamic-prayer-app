@@ -1,7 +1,7 @@
 import { AnimatedCrossfadeImage } from "@/components/AnimatedCrossfadeImage";
 import { AnimatedTintIcon } from "@/components/AnimatedTintIcon";
 import { CalendarSettingsComponent } from "@/components/CalendarSettings";
-import { NotificationsSettings } from "@/components/NotificationsSettings";
+import { PermissionsSettings } from "@/components/PermissionsSettings";
 import { PrayerTimesSettings } from "@/components/PrayerTimesSettings";
 import { ThemesSettings } from "@/components/ThemesSettings";
 import {
@@ -162,19 +162,21 @@ export default function SettingsHome() {
       ],
     },
     {
-      id: "notifications",
-      title: "Notifications",
+      id: "permissions",
+      title: "Permissions",
       icon: require("../../../assets/images/prayer-pro-icons/settings-tab/settings-notifications.png"),
       data: [
         {
-          id: "notifications-content",
+          id: "permissions-content",
           content: (
-            <NotificationsSettings
+            <PermissionsSettings
               masterToggle={masterToggle}
               toggleMasterNotifications={toggleMasterNotifications}
               colors={colors}
               animatedTextStyle={animatedTextStyle}
               animatedActiveTextStyle={animatedActiveTextStyle}
+              animatedSecondaryTextStyle={animatedSecondaryTextStyle}
+              animatedSeparatorStyle={animatedSeparatorStyle}
             />
           ),
         },
