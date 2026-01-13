@@ -5,7 +5,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 import { DeviceMotion } from "expo-sensors";
 import React, { useState } from "react";
-import { Image, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Image, Text, TouchableOpacity, View } from "react-native";
 import { AnimatedCrossfadeImage } from "./AnimatedCrossfadeImage";
 
 const WALKTHROUGH_STEPS = [
@@ -117,6 +117,14 @@ export function Walkthrough({ onComplete }: WalkthroughProps) {
 
   const goToNextStep = () => {
     if (isLastStep) {
+      if (!locationGranted || !motionGranted) {
+        Alert.alert(
+          "Permissions Required",
+          "Location and motion permissions are required for accurate prayer times and Qibla direction. Please go back and enable permissions to continue.",
+          [{ text: "OK" }]
+        );
+        return;
+      }
       onComplete();
     } else {
       setActiveIndex(activeIndex + 1);
@@ -270,15 +278,15 @@ export function Walkthrough({ onComplete }: WalkthroughProps) {
 
             {/* Navigation buttons */}
             <View className="flex-row gap-3 mt-auto">
-              <TouchableOpacity
-                className="flex-1 py-4 rounded-xl items-center"
-                style={{ backgroundColor: themeColors?.inactive }}
-                onPress={isFirstStep ? onComplete : goToPreviousStep}
-              >
-                <Text className="text-white text-lg font-semibold">
-                  {isFirstStep ? "Skip" : "Back"}
-                </Text>
-              </TouchableOpacity>
+              {!isFirstStep && (
+                <TouchableOpacity
+                  className="flex-1 py-4 rounded-xl items-center"
+                  style={{ backgroundColor: themeColors?.inactive }}
+                  onPress={isFirstStep ? onComplete : goToPreviousStep}
+                >
+                  <Text className="text-white text-lg font-semibold">Back</Text>
+                </TouchableOpacity>
+              )}
               <TouchableOpacity
                 className="flex-1 py-4 rounded-xl items-center"
                 style={{ backgroundColor: themeColors?.active }}

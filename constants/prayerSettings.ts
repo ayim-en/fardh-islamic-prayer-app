@@ -47,7 +47,7 @@ export const CALCULATION_METHODS: CalculationMethod[] = [
 
 // Juristic schools for Asr calculation
 export const SCHOOLS: School[] = [
-  { id: 0, name: "Shafi", description: "Standard Asr time" },
+  { id: 0, name: "Shafi", description: "Earlier Asr time" },
   { id: 1, name: "Hanafi", description: "Later Asr time" },
 ];
 
