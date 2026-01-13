@@ -29,6 +29,7 @@ interface PrayerCarouselProps {
   onPageChange: (page: number) => void;
   notificationsEnabled: Record<string, boolean>;
   onToggleNotification: (prayer: string) => void;
+  notificationsMasterToggle: boolean;
   activeColor: string;
   inactiveColor: string;
   currentPrayer: string | null;
@@ -53,6 +54,7 @@ export const PrayerCarousel = forwardRef<
       onPageChange,
       notificationsEnabled,
       onToggleNotification,
+      notificationsMasterToggle,
       activeColor,
       inactiveColor,
       currentPrayer,
@@ -187,7 +189,7 @@ export const PrayerCarousel = forwardRef<
                           >
                             <AnimatedTintIcon
                               source={
-                                notificationsEnabled[prayer]
+                                notificationsMasterToggle && notificationsEnabled[prayer]
                                   ? require("../assets/images/prayer-pro-icons/home-page/icon-notify-on.png")
                                   : require("../assets/images/prayer-pro-icons/home-page/icon-notify-off.png")
                               }

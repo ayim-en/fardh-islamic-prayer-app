@@ -2,7 +2,7 @@
   "expo": {
     "name": "Fardh",
     "slug": "fardh",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/fardh-icon.png",
     "scheme": "fardh",
@@ -18,9 +18,7 @@
         "NSMotionUsageDescription": "This app uses motion sensors to provide an accurate Qibla compass direction."
       },
       "entitlements": {
-        "com.apple.security.application-groups": [
-          "group.com.ayimen.fardh"
-        ]
+        "com.apple.security.application-groups": ["group.com.ayimen.fardh"]
       }
     },
     "notification": {

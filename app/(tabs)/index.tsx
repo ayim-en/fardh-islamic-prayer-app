@@ -31,7 +31,7 @@ export default function Index() {
     todayIndex,
     currentPrayer,
   } = usePrayerTimes(location);
-  const { notificationsEnabled, toggleNotification } =
+  const { notificationsEnabled, toggleNotification, masterToggle } =
     useNotifications(prayerDict);
 
   const error = locationError || prayerError;
@@ -89,6 +89,7 @@ export default function Index() {
         onPageChange={setCurrentPage}
         notificationsEnabled={notificationsEnabled}
         onToggleNotification={toggleNotification}
+        notificationsMasterToggle={masterToggle}
         activeColor={
           themePrayerDisplay
             ? prayerThemeColors[themePrayerDisplay as keyof typeof prayerThemeColors]
