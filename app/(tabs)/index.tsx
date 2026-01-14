@@ -1,7 +1,11 @@
 import type { PrayerCarouselRef } from "@/components/PrayerCarousel";
 import { PrayerCarousel } from "@/components/PrayerCarousel";
 import { PrayerHeader } from "@/components/PrayerHeader";
-import { darkModeColors, lightModeColors, prayerThemeColors } from "@/constants/prayers";
+import {
+  darkModeColors,
+  lightModeColors,
+  prayerThemeColors,
+} from "@/constants/prayers";
 import { useCalendarSettings } from "@/context/CalendarSettingsContext";
 import { useThemeColors } from "@/context/ThemeContext";
 import { useLocation } from "@/hooks/useLocation";
@@ -64,21 +68,54 @@ export default function Index() {
   const themePrayerDisplay = themePrayer || currentPrayer?.prayer;
 
   // isDarkMode from context already falls back to system color scheme
-  const bgColor = isDarkMode ? darkModeColors.background : lightModeColors.background;
+  const bgColor = isDarkMode
+    ? darkModeColors.background
+    : lightModeColors.background;
 
-  if (error) return (
-    <View className="flex-1 m-4" style={{ backgroundColor: bgColor }}>
-      <Text className="color-red-600">{error}</Text>
-    </View>
-  );
+  const isLocationError = error?.toLowerCase().includes("location");
+
+  if (error)
+    return (
+      <View
+        className="flex-1 justify-center items-center px-8"
+        style={{ backgroundColor: bgColor }}
+      >
+        <StatusBar style={isDarkMode ? "light" : "dark"} />
+        <View
+          className="w-full rounded-2xl p-6 items-center"
+          style={{
+            borderWidth: 2,
+            borderColor: prayerThemeColors.Fajr.active,
+          }}
+        >
+          <Text
+            className="text-xl font-bold text-center mb-2"
+            style={{
+              color: isDarkMode ? darkModeColors.text : lightModeColors.text,
+            }}
+          >
+            {isLocationError ? "Location Required" : "Something Went Wrong"}
+          </Text>
+          <Text
+            className="text-base text-center"
+            style={{
+              color: isDarkMode
+                ? darkModeColors.textSecondary
+                : lightModeColors.textSecondary,
+            }}
+          >
+            {isLocationError
+              ? "Fardh needs access to your location to calculate accurate prayer times for your area. Enable location in the Permissions Settings."
+              : error}
+          </Text>
+        </View>
+      </View>
+    );
 
   return (
     <View className="flex-1" style={{ backgroundColor: bgColor }}>
       <StatusBar style="light" />
-      <PrayerHeader
-        currentPrayer={currentPrayer}
-        locationName={locationName}
-      />
+      <PrayerHeader currentPrayer={currentPrayer} locationName={locationName} />
       <PrayerCarousel
         ref={carouselRef}
         prayerDict={prayerDict}
@@ -92,14 +129,16 @@ export default function Index() {
         notificationsMasterToggle={masterToggle}
         activeColor={
           themePrayerDisplay
-            ? prayerThemeColors[themePrayerDisplay as keyof typeof prayerThemeColors]
-                ?.active || "#568FAF"
+            ? prayerThemeColors[
+                themePrayerDisplay as keyof typeof prayerThemeColors
+              ]?.active || "#568FAF"
             : "#568FAF"
         }
         inactiveColor={
           themePrayerDisplay
-            ? prayerThemeColors[themePrayerDisplay as keyof typeof prayerThemeColors]
-                ?.inactive || "#8398a3"
+            ? prayerThemeColors[
+                themePrayerDisplay as keyof typeof prayerThemeColors
+              ]?.inactive || "#8398a3"
             : "#8398a3"
         }
         currentPrayer={currentPrayer?.prayer || null}

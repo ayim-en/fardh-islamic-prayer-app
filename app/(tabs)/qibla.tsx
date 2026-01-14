@@ -4,6 +4,7 @@ import {
   darkModeColors,
   lightModeColors,
   prayerBackgrounds,
+  prayerThemeColors,
 } from "@/constants/prayers";
 import { useThemeColors } from "@/context/ThemeContext";
 import { useAnimatedTextColor } from "@/hooks/useAnimatedColor";
@@ -12,8 +13,9 @@ import { useLocation } from "@/hooks/useLocation";
 import { usePrayerTimes } from "@/hooks/usePrayerTimes";
 import { useQiblaDirection } from "@/hooks/useQiblaDirection";
 import { useIsFocused } from "@react-navigation/native";
+import { DeviceMotion } from "expo-sensors";
 import { StatusBar } from "expo-status-bar";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Text, Vibration, View } from "react-native";
 import Animated, {
   runOnJS,
@@ -50,7 +52,7 @@ const GuidanceText = ({
     () => {
       let angle = qiblaDirection - deviceHeading.value;
       // Normalize to -180 to 180 (handle JS negative modulo correctly)
-      angle = (((angle + 180) % 360) + 360) % 360 - 180;
+      angle = ((((angle + 180) % 360) + 360) % 360) - 180;
 
       // Determine guidance key
       if (Math.abs(angle) < 2.5) {
@@ -87,13 +89,32 @@ const GuidanceText = ({
 };
 
 export default function Qibla() {
-  const { location, cityName, error: locationError, refreshLocation } = useLocation();
+  const {
+    location,
+    cityName,
+    error: locationError,
+    refreshLocation,
+  } = useLocation();
   const { qiblaData, loading, error: qiblaError } = useQiblaDirection(location);
   const { currentPrayer } = usePrayerTimes(location);
   const deviceHeading = useDeviceHeading();
   const { colors, themePrayer, isDarkMode } = useThemeColors();
-  const bgColor = isDarkMode ? darkModeColors.background : lightModeColors.background;
+  const bgColor = isDarkMode
+    ? darkModeColors.background
+    : lightModeColors.background;
   const isFocused = useIsFocused();
+  const [motionPermission, setMotionPermission] = useState<boolean | null>(
+    null
+  );
+
+  // Check motion permission on mount
+  useEffect(() => {
+    const checkMotionPermission = async () => {
+      const { status } = await DeviceMotion.getPermissionsAsync();
+      setMotionPermission(status === "granted");
+    };
+    checkMotionPermission();
+  }, []);
 
   // Animated text styles for guidance
   const animatedInactiveTextStyle = useAnimatedTextColor(colors.inactive);
@@ -109,7 +130,7 @@ export default function Qibla() {
     if (!qiblaData) return false;
     let relativeAngle = qiblaData.direction - deviceHeading.value;
     // Normalize to -180 to 180 (handle JS negative modulo correctly)
-    relativeAngle = (((relativeAngle + 180) % 360) + 360) % 360 - 180;
+    relativeAngle = ((((relativeAngle + 180) % 360) + 360) % 360) - 180;
     return Math.abs(relativeAngle) < 2.5;
   });
 
@@ -133,17 +154,52 @@ export default function Qibla() {
     ? prayerBackgrounds[displayPrayer] || null
     : null;
 
-  if (error) {
+  const isLocationError = error?.toLowerCase().includes("location");
+  const isMotionError = motionPermission === false;
+
+  if (error || isMotionError) {
+    const errorTitle = isLocationError
+      ? "Location Required"
+      : isMotionError
+        ? "Motion Required"
+        : "Something Went Wrong";
+    const errorMessage = isLocationError
+      ? "Fardh needs access to your location to calculate the Qibla direction for your area. Enable location in the Permissions Settings."
+      : isMotionError
+        ? "Fardh needs access to motion sensors to power the Qibla compass. Enable motion in the Permissions Settings."
+        : error;
     return (
       <View
-        className="flex-1 items-center justify-center p-6"
-        style={{
-          backgroundColor: isDarkMode
-            ? darkModeColors.background
-            : lightModeColors.background,
-        }}
+        className="flex-1 justify-center items-center px-8"
+        style={{ backgroundColor: bgColor }}
       >
-        <Text className="text-red-600 text-center">{error}</Text>
+        <StatusBar style={isDarkMode ? "light" : "dark"} />
+        <View
+          className="w-full rounded-2xl p-6 items-center"
+          style={{
+            borderWidth: 2,
+            borderColor: prayerThemeColors.Fajr.active,
+          }}
+        >
+          <Text
+            className="text-xl font-bold text-center mb-2"
+            style={{
+              color: isDarkMode ? darkModeColors.text : lightModeColors.text,
+            }}
+          >
+            {errorTitle}
+          </Text>
+          <Text
+            className="text-base text-center"
+            style={{
+              color: isDarkMode
+                ? darkModeColors.textSecondary
+                : lightModeColors.textSecondary,
+            }}
+          >
+            {errorMessage}
+          </Text>
+        </View>
       </View>
     );
   }

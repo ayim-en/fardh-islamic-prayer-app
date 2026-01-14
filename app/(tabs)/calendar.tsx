@@ -1,3 +1,4 @@
+import { AnimatedTintIcon } from "@/components/AnimatedTintIcon";
 import { CalendarCard, CalendarCardRef } from "@/components/CalendarCard";
 import { CalendarHeader } from "@/components/CalendarHeader";
 import { HolidayBottomSheet } from "@/components/HolidayBottomSheet";
@@ -5,9 +6,14 @@ import {
   darkModeColors,
   lightModeColors,
   prayerBackgrounds,
+  prayerThemeColors,
 } from "@/constants/prayers";
 import { useCalendarSettings } from "@/context/CalendarSettingsContext";
 import { useThemeColors } from "@/context/ThemeContext";
+import {
+  useAnimatedBackgroundColor,
+  useAnimatedTextColor,
+} from "@/hooks/useAnimatedColor";
 import { useLocation } from "@/hooks/useLocation";
 import { usePrayerTimes } from "@/hooks/usePrayerTimes";
 import {
@@ -22,14 +28,23 @@ import {
   hasIncludedHoliday,
 } from "@/utils/calendarHelpers";
 import { useNavigation } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Dimensions, Easing, Pressable, View } from "react-native";
-import Reanimated from "react-native-reanimated";
-import { AnimatedTintIcon } from "@/components/AnimatedTintIcon";
+import { StatusBar } from "expo-status-bar";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
-  useAnimatedBackgroundColor,
-  useAnimatedTextColor,
-} from "@/hooks/useAnimatedColor";
+  Animated,
+  Dimensions,
+  Easing,
+  Pressable,
+  Text,
+  View,
+} from "react-native";
+import Reanimated from "react-native-reanimated";
 
 const { width } = Dimensions.get("window");
 
@@ -46,13 +61,14 @@ export default function CalendarScreen() {
   const [sheetHolidays, setSheetHolidays] = useState<string[]>([]);
   const [isReady, setIsReady] = useState(false);
   const { colors, themePrayer, isDarkMode } = useThemeColors();
-  const { settings: calendarSettings, loading: calendarSettingsLoading } = useCalendarSettings();
+  const { settings: calendarSettings, loading: calendarSettingsLoading } =
+    useCalendarSettings();
   const bgColor = isDarkMode
     ? darkModeColors.background
     : lightModeColors.background;
   const animatedBgStyle = useAnimatedBackgroundColor(bgColor);
   const animatedActiveTextStyle = useAnimatedTextColor(colors.active);
-  const { location, locationName } = useLocation();
+  const { location, locationName, error: locationError } = useLocation();
   const { currentPrayer } = usePrayerTimes(location);
   const [holidayMarks, setHolidayMarks] = useState<Record<string, any>>({});
 
@@ -170,6 +186,47 @@ export default function CalendarScreen() {
       }).start();
     }
   }, [selectedHolidays, holidayBadgeAnim]);
+
+  const isLocationError = locationError?.toLowerCase().includes("location");
+
+  if (locationError) {
+    return (
+      <View
+        className="flex-1 justify-center items-center px-8"
+        style={{ backgroundColor: bgColor }}
+      >
+        <StatusBar style={isDarkMode ? "light" : "dark"} />
+        <View
+          className="w-full rounded-2xl p-6 items-center"
+          style={{
+            borderWidth: 2,
+            borderColor: prayerThemeColors.Fajr.active,
+          }}
+        >
+          <Text
+            className="text-xl font-bold text-center mb-2"
+            style={{
+              color: isDarkMode ? darkModeColors.text : lightModeColors.text,
+            }}
+          >
+            {isLocationError ? "Location Required" : "Something Went Wrong"}
+          </Text>
+          <Text
+            className="text-base text-center"
+            style={{
+              color: isDarkMode
+                ? darkModeColors.textSecondary
+                : lightModeColors.textSecondary,
+            }}
+          >
+            {isLocationError
+              ? "Fardh needs access to your location to display an accurate Islamic calendar. Enable location in the Permissions Settings."
+              : locationError}
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1" style={{ backgroundColor: bgColor }}>
