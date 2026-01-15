@@ -7,6 +7,7 @@ import {
   prayerThemeColors,
 } from "@/constants/prayers";
 import { useCalendarSettings } from "@/context/CalendarSettingsContext";
+import { usePrayerSettings } from "@/context/PrayerSettingsContext";
 import { useThemeColors } from "@/context/ThemeContext";
 import { useLocation } from "@/hooks/useLocation";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -23,6 +24,7 @@ export default function Index() {
   const navigation = useNavigation<any>();
   const { themePrayer, isDarkMode } = useThemeColors();
   const { settings: calendarSettings } = useCalendarSettings();
+  const { settings: prayerSettings } = usePrayerSettings();
 
   // Custom hooks to get states
   const { location, locationName, error: locationError } = useLocation();
@@ -115,7 +117,7 @@ export default function Index() {
   return (
     <View className="flex-1" style={{ backgroundColor: bgColor }}>
       <StatusBar style="light" />
-      <PrayerHeader currentPrayer={currentPrayer} locationName={locationName} />
+      <PrayerHeader currentPrayer={currentPrayer} locationName={locationName} timeFormat={prayerSettings.timeFormat} />
       <PrayerCarousel
         ref={carouselRef}
         prayerDict={prayerDict}
@@ -143,6 +145,7 @@ export default function Index() {
         }
         currentPrayer={currentPrayer?.prayer || null}
         dateFormat={calendarSettings.carouselDateFormat}
+        timeFormat={prayerSettings.timeFormat}
       />
     </View>
   );

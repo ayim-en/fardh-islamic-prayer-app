@@ -89,12 +89,21 @@ export const tuneSettingsToString = (tune: TuneSettings): string => {
   return `0,${tune.Fajr},${tune.Sunrise},${tune.Dhuhr},${tune.Asr},${tune.Maghrib},0,${tune.Isha},0`;
 };
 
+// Time format options
+export type TimeFormat = "12h" | "24h";
+
+export const TIME_FORMATS: { id: TimeFormat; name: string; example: string }[] = [
+  { id: "12h", name: "12-hour", example: "5:30 PM" },
+  { id: "24h", name: "24-hour", example: "17:30" },
+];
+
 // Default settings
 export const DEFAULT_PRAYER_SETTINGS = {
   method: 2, // ISNA
   school: 0 as 0 | 1, // Shafi
   latitudeAdjustmentMethod: null as number | null,
   tune: DEFAULT_TUNE_SETTINGS,
+  timeFormat: "24h" as TimeFormat,
 };
 
 export type PrayerSettings = typeof DEFAULT_PRAYER_SETTINGS;

@@ -4,6 +4,8 @@ import {
   LATITUDE_ADJUSTMENTS,
   PrayerSettings,
   SCHOOLS,
+  TIME_FORMATS,
+  TimeFormat,
   TUNABLE_PRAYERS,
   TunablePrayer,
   TuneSettings,
@@ -41,10 +43,17 @@ export const PrayerTimesSettings = ({
   const [localTune, setLocalTune] = useState<TuneSettings>(settings.tune);
   const isTuneExpanded = expandedPickers.has("tune");
 
+  // Local state for time format
+  const [localTimeFormat, setLocalTimeFormat] = useState<TimeFormat>(settings.timeFormat);
+  const isTimeFormatExpanded = expandedPickers.has("timeFormat");
+
   // Check if local tune differs from saved settings
-  const hasUnsavedChanges = TUNABLE_PRAYERS.some(
+  const hasTuneUnsavedChanges = TUNABLE_PRAYERS.some(
     (p) => localTune[p.key] !== settings.tune[p.key]
   );
+
+  // Check if local time format differs from saved settings
+  const hasTimeFormatUnsavedChanges = localTimeFormat !== settings.timeFormat;
 
   // Reset local tune when picker is opened (sync with current saved values)
   useEffect(() => {
@@ -52,6 +61,13 @@ export const PrayerTimesSettings = ({
       setLocalTune(settings.tune);
     }
   }, [isTuneExpanded, settings.tune]);
+
+  // Reset local time format when picker is opened
+  useEffect(() => {
+    if (isTimeFormatExpanded) {
+      setLocalTimeFormat(settings.timeFormat);
+    }
+  }, [isTimeFormatExpanded, settings.timeFormat]);
 
   // Update local tune value (doesn't save to storage)
   const updateLocalTune = useCallback(
@@ -61,16 +77,29 @@ export const PrayerTimesSettings = ({
     []
   );
 
-  // Save all tune changes at once
-  const saveChanges = useCallback(async () => {
+  // Save all tune changes at once and close picker
+  const saveTuneChanges = useCallback(async () => {
     await updateAllTune(localTune);
-  }, [localTune, updateAllTune]);
+    togglePicker("tune");
+  }, [localTune, updateAllTune, togglePicker]);
 
-  // Discard changes and close picker
-  const discardChanges = useCallback(() => {
+  // Discard tune changes and close picker
+  const discardTuneChanges = useCallback(() => {
     setLocalTune(settings.tune);
     togglePicker("tune");
   }, [settings.tune, togglePicker]);
+
+  // Save time format changes and close picker
+  const saveTimeFormatChanges = useCallback(async () => {
+    await updateSettings({ timeFormat: localTimeFormat });
+    togglePicker("timeFormat");
+  }, [localTimeFormat, updateSettings, togglePicker]);
+
+  // Discard time format changes and close picker
+  const discardTimeFormatChanges = useCallback(() => {
+    setLocalTimeFormat(settings.timeFormat);
+    togglePicker("timeFormat");
+  }, [settings.timeFormat, togglePicker]);
 
   return (
     <View className="gap-2">
@@ -425,10 +454,10 @@ export const PrayerTimesSettings = ({
               );
             })}
             {/* Save/Discard buttons */}
-            {hasUnsavedChanges && (
+            {hasTuneUnsavedChanges && (
               <View className="flex-row justify-center gap-3 mt-4">
                 <TouchableOpacity
-                  onPress={discardChanges}
+                  onPress={discardTuneChanges}
                   className="px-4 py-2 rounded-lg"
                   style={{ backgroundColor: colors.active + "20" }}
                 >
@@ -440,7 +469,112 @@ export const PrayerTimesSettings = ({
                   </Animated.Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  onPress={saveChanges}
+                  onPress={saveTuneChanges}
+                  className="px-4 py-2 rounded-lg"
+                  style={{ backgroundColor: colors.active }}
+                >
+                  <Animated.Text className="font-medium text-white">
+                    Save Changes
+                  </Animated.Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
+      </View>
+
+      <Animated.View
+        className="my-2"
+        style={[{ height: 1 }, animatedSeparatorStyle]}
+      />
+
+      {/* Time Format Dropdown */}
+      <View>
+        <TouchableOpacity
+          onPress={() => togglePicker("timeFormat")}
+          className="flex-row items-center py-2"
+        >
+          <View className="flex-1">
+            <Animated.Text
+              className="text-base font-medium"
+              style={animatedTextStyle}
+            >
+              Time Format
+            </Animated.Text>
+            <Animated.Text className="text-sm" style={animatedActiveTextStyle}>
+              {TIME_FORMATS.find((f) => f.id === settings.timeFormat)?.name ||
+                "24-hour"}{" "}
+              ({TIME_FORMATS.find((f) => f.id === settings.timeFormat)?.example})
+            </Animated.Text>
+          </View>
+          <Animated.View
+            style={{
+              transform: [
+                {
+                  rotate: expandedPickers.has("timeFormat") ? "180deg" : "0deg",
+                },
+              ],
+            }}
+          >
+            <AnimatedTintIcon
+              source={require("../assets/images/prayer-pro-icons/settings-tab/settings-dropdown.png")}
+              size={16}
+              tintColor={colors.active}
+            />
+          </Animated.View>
+        </TouchableOpacity>
+        {expandedPickers.has("timeFormat") && (
+          <View className="mt-1">
+            {TIME_FORMATS.map((format) => {
+              const isSelected = localTimeFormat === format.id;
+              return (
+                <TouchableOpacity
+                  key={format.id}
+                  onPress={() => setLocalTimeFormat(format.id)}
+                  className="flex-row items-center py-2 pl-4"
+                >
+                  <View className="flex-1">
+                    <Animated.Text
+                      style={
+                        isSelected
+                          ? animatedActiveTextStyle
+                          : animatedSecondaryTextStyle
+                      }
+                    >
+                      {format.name}
+                    </Animated.Text>
+                    <Animated.Text
+                      className="text-xs"
+                      style={animatedSecondaryTextStyle}
+                    >
+                      {format.example}
+                    </Animated.Text>
+                  </View>
+                  {isSelected && (
+                    <Animated.Text style={animatedActiveTextStyle}>
+                      ✓
+                    </Animated.Text>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+            {/* Save/Discard buttons */}
+            {hasTimeFormatUnsavedChanges && (
+              <View className="flex-row justify-center gap-3 mt-4">
+                <TouchableOpacity
+                  onPress={discardTimeFormatChanges}
+                  className="px-4 py-2 rounded-lg"
+                  style={{ backgroundColor: colors.active + "20" }}
+                >
+                  <Animated.Text
+                    className="font-medium"
+                    style={animatedSecondaryTextStyle}
+                  >
+                    Discard
+                  </Animated.Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={saveTimeFormatChanges}
                   className="px-4 py-2 rounded-lg"
                   style={{ backgroundColor: colors.active }}
                 >

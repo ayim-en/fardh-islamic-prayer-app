@@ -36,11 +36,13 @@ export const PrayerSettingsProvider: React.FC<{
         const stored = await AsyncStorage.getItem(STORAGE_KEY);
         if (stored) {
           const parsed = JSON.parse(stored);
-          // Merge tune settings properly (handle existing users without tune)
+          // Merge settings properly (handle existing users without tune or timeFormat)
           setSettings({
             ...DEFAULT_PRAYER_SETTINGS,
             ...parsed,
             tune: { ...DEFAULT_TUNE_SETTINGS, ...parsed.tune },
+            // Ensure timeFormat has a valid value for existing users
+            timeFormat: parsed.timeFormat || DEFAULT_PRAYER_SETTINGS.timeFormat,
           });
         }
       } catch (error) {

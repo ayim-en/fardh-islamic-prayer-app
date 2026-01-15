@@ -3,8 +3,10 @@ import {
   lightModeColors,
   prayerBackgrounds,
 } from "@/constants/prayers";
+import { TimeFormat } from "@/constants/prayerSettings";
 import { useThemeColors } from "@/context/ThemeContext";
 import { useAnimatedBackgroundColor } from "@/hooks/useAnimatedColor";
+import { formatTimeWithPreference } from "@/utils/prayerHelpers";
 import React from "react";
 import { Dimensions, Text, View } from "react-native";
 import Animated from "react-native-reanimated";
@@ -15,11 +17,13 @@ const { height } = Dimensions.get("window");
 interface CurrentPrayerHeaderProps {
   currentPrayer: { prayer: string; time: string } | null;
   locationName: string;
+  timeFormat?: TimeFormat;
 }
 
 export const PrayerHeader = ({
   currentPrayer,
   locationName,
+  timeFormat = "24h",
 }: CurrentPrayerHeaderProps) => {
   const { isDarkMode, themePrayer } = useThemeColors();
   // Get the background image based on theme prayer (if set) or current prayer (null if not loaded yet)
@@ -58,9 +62,14 @@ export const PrayerHeader = ({
             textShadowColor: "rgba(0,0,0,0.4)",
             textShadowOffset: { width: 0, height: 2 },
             textShadowRadius: 4,
+            width: "100%",
+            textAlign: "center",
+            paddingHorizontal: 16,
           }}
+          numberOfLines={1}
+          adjustsFontSizeToFit
         >
-          {currentPrayer ? currentPrayer.time : "--:--"}
+          {currentPrayer ? formatTimeWithPreference(currentPrayer.time, timeFormat) : "--:--"}
         </Text>
         {/* <View className="flex-row items-center gap-2">
           <Text

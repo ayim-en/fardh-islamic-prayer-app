@@ -94,6 +94,17 @@ export const formatTime12Hour = (timeString: string): string => {
   return `${hours}:${minutes} ${ampm}`;
 };
 
+// Formats time string based on user's time format preference
+export const formatTimeWithPreference = (
+  timeString: string,
+  timeFormat: "12h" | "24h"
+): string => {
+  if (timeFormat === "12h") {
+    return formatTime12Hour(timeString);
+  }
+  return cleanTimeString(timeString);
+};
+
 // Parses prayer time string to Date object for a given ISO date
 export const parsePrayerTime = (isoDate: string, timeString: string): Date => {
   const cleanTime = cleanTimeString(timeString);

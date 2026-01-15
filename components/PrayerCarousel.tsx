@@ -5,10 +5,11 @@ import {
   lightModeColors,
   prayerIcons,
 } from "@/constants/prayers";
+import { TimeFormat } from "@/constants/prayerSettings";
 import { useThemeColors } from "@/context/ThemeContext";
 import { useAnimatedBackgroundColor, useAnimatedTextColor } from "@/hooks/useAnimatedColor";
 import { PrayerDict } from "@/prayer-api/prayerTimesAPI";
-import { cleanTimeString, formatDate, formatHijriDateShort } from "@/utils/prayerHelpers";
+import { formatDate, formatHijriDateShort, formatTimeWithPreference } from "@/utils/prayerHelpers";
 import React, { forwardRef, useImperativeHandle, useRef } from "react";
 import { Dimensions, Pressable, Text, Vibration, View } from "react-native";
 import Animated from "react-native-reanimated";
@@ -34,6 +35,7 @@ interface PrayerCarouselProps {
   inactiveColor: string;
   currentPrayer: string | null;
   dateFormat?: CarouselDateFormat;
+  timeFormat?: TimeFormat;
 }
 
 export type PrayerCarouselRef = {
@@ -59,6 +61,7 @@ export const PrayerCarousel = forwardRef<
       inactiveColor,
       currentPrayer,
       dateFormat = "gregorian",
+      timeFormat = "24h",
     },
     ref
   ) => {
@@ -179,7 +182,7 @@ export const PrayerCarousel = forwardRef<
                           <Animated.Text
                             style={[{ fontSize: 18 }, animatedTertiaryTextStyle]}
                           >
-                            {cleanTimeString(dayPrayers.timings[prayer])}
+                            {formatTimeWithPreference(dayPrayers.timings[prayer], timeFormat)}
                           </Animated.Text>
                           <Pressable
                             onPress={() => {
