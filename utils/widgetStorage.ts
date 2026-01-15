@@ -34,6 +34,10 @@ export interface WidgetPrayerData {
   // Theme colors
   accentColor: string;
   isDarkMode: boolean;
+  // Theme override prayer (if user has set a theme)
+  themePrayer: string | null;
+  // Time format preference
+  timeFormat: "12h" | "24h";
 }
 
 /**

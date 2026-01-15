@@ -22,6 +22,26 @@ struct PrayerData: Codable {
     // Theme colors from app
     let accentColor: String?
     let isDarkMode: Bool?
+    // Theme override prayer (if user has set a theme)
+    let themePrayer: String?
+    // Time format preference
+    let timeFormat: String?
+
+    // Helper to format time based on preference
+    func formatTime(_ time: String) -> String {
+        let use12Hour = timeFormat == "12h"
+        guard use12Hour else { return time }
+
+        // Parse "HH:mm" and convert to "h:mm a"
+        let parts = time.split(separator: ":")
+        guard parts.count == 2,
+              let hour = Int(parts[0]),
+              let minute = Int(parts[1]) else { return time }
+
+        let period = hour >= 12 ? "PM" : "AM"
+        let hour12 = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour)
+        return String(format: "%d:%02d %@", hour12, minute, period)
+    }
 }
 
 // MARK: - Timeline Provider
@@ -41,7 +61,9 @@ struct PrayerTimelineProvider: TimelineProvider {
         locationName: "Open app to sync",
         lastUpdated: nil,
         accentColor: nil,
-        isDarkMode: nil
+        isDarkMode: nil,
+        themePrayer: nil,
+        timeFormat: nil
     )
 
     func placeholder(in context: Context) -> PrayerTimelineEntry {
@@ -78,34 +100,27 @@ struct PrayerTimelineProvider: TimelineProvider {
             ("Isha", prayerData.isha)
         ]
 
-        // Parse "5:30 AM" to today's Date
+        // Parse "17:30" to today's Date
         func parseTime(_ timeStr: String) -> Date? {
             let formatter = DateFormatter()
             formatter.locale = Locale(identifier: "en_US_POSIX")
-            formatter.dateFormat = "h:mm a"
+            formatter.dateFormat = "HH:mm"
             guard let parsed = formatter.date(from: timeStr) else { return nil }
             let comps = calendar.dateComponents([.hour, .minute], from: parsed)
             return calendar.date(bySettingHour: comps.hour ?? 0, minute: comps.minute ?? 0, second: 0, of: todayStart)
         }
 
-        // Find current prayer (most recent one that has passed)
+        // Use app's currentPrayer for NOW entry
+        entries.append(PrayerTimelineEntry(date: now, prayerData: prayerData))
+
+        // Find index of current prayer for future entries
         var currentPrayerIndex = 0
         for (index, prayer) in prayers.enumerated() {
-            if let prayerDate = parseTime(prayer.time), prayerDate <= now {
+            if prayer.name == prayerData.currentPrayer {
                 currentPrayerIndex = index
+                break
             }
         }
-
-        // Create entry for NOW with current prayer
-        let currentEntry = PrayerData(
-            fajr: prayerData.fajr, sunrise: prayerData.sunrise, dhuhr: prayerData.dhuhr,
-            asr: prayerData.asr, maghrib: prayerData.maghrib, isha: prayerData.isha,
-            tomorrowFajr: prayerData.tomorrowFajr,
-            currentPrayer: prayers[currentPrayerIndex].name,
-            locationName: prayerData.locationName, lastUpdated: prayerData.lastUpdated,
-            accentColor: prayerData.accentColor, isDarkMode: prayerData.isDarkMode
-        )
-        entries.append(PrayerTimelineEntry(date: now, prayerData: currentEntry))
 
         // Create entries for each future prayer transition
         for i in (currentPrayerIndex + 1)..<prayers.count {
@@ -116,7 +131,9 @@ struct PrayerTimelineProvider: TimelineProvider {
                 tomorrowFajr: prayerData.tomorrowFajr,
                 currentPrayer: prayers[i].name,
                 locationName: prayerData.locationName, lastUpdated: prayerData.lastUpdated,
-                accentColor: prayerData.accentColor, isDarkMode: prayerData.isDarkMode
+                accentColor: prayerData.accentColor, isDarkMode: prayerData.isDarkMode,
+                themePrayer: prayerData.themePrayer,
+                timeFormat: prayerData.timeFormat
             )
             entries.append(PrayerTimelineEntry(date: prayerDate, prayerData: entryData))
         }
@@ -154,9 +171,9 @@ struct MorningPrayerWidgetView: View {
         case .accessoryRectangular:
             // Lock screen rectangular widget
             VStack(alignment: .leading, spacing: 4) {
-                LockScreenPrayerRow(name: "Fajr", time: entry.prayerData.fajr, isActive: entry.prayerData.currentPrayer == "Fajr")
-                LockScreenPrayerRow(name: "Sunrise", time: entry.prayerData.sunrise, isActive: entry.prayerData.currentPrayer == "Sunrise")
-                LockScreenPrayerRow(name: "Dhuhr", time: entry.prayerData.dhuhr, isActive: entry.prayerData.currentPrayer == "Dhuhr")
+                LockScreenPrayerRow(name: "Fajr", time: entry.prayerData.formatTime(entry.prayerData.fajr), isActive: entry.prayerData.currentPrayer == "Fajr")
+                LockScreenPrayerRow(name: "Sunrise", time: entry.prayerData.formatTime(entry.prayerData.sunrise), isActive: entry.prayerData.currentPrayer == "Sunrise")
+                LockScreenPrayerRow(name: "Dhuhr", time: entry.prayerData.formatTime(entry.prayerData.dhuhr), isActive: entry.prayerData.currentPrayer == "Dhuhr")
             }
         case .accessoryInline:
             // Lock screen inline widget
@@ -177,10 +194,10 @@ struct MorningPrayerWidgetView: View {
     }
 
     private func getCurrentMorningTime() -> String {
-        if entry.prayerData.currentPrayer == "Fajr" { return entry.prayerData.fajr }
-        if entry.prayerData.currentPrayer == "Sunrise" { return entry.prayerData.sunrise }
-        if entry.prayerData.currentPrayer == "Dhuhr" { return entry.prayerData.dhuhr }
-        return entry.prayerData.fajr
+        if entry.prayerData.currentPrayer == "Fajr" { return entry.prayerData.formatTime(entry.prayerData.fajr) }
+        if entry.prayerData.currentPrayer == "Sunrise" { return entry.prayerData.formatTime(entry.prayerData.sunrise) }
+        if entry.prayerData.currentPrayer == "Dhuhr" { return entry.prayerData.formatTime(entry.prayerData.dhuhr) }
+        return entry.prayerData.formatTime(entry.prayerData.fajr)
     }
 }
 
@@ -195,9 +212,9 @@ struct EveningPrayerWidgetView: View {
         case .accessoryRectangular:
             // Lock screen rectangular widget
             VStack(alignment: .leading, spacing: 4) {
-                LockScreenPrayerRow(name: "Asr", time: entry.prayerData.asr, isActive: entry.prayerData.currentPrayer == "Asr")
-                LockScreenPrayerRow(name: "Maghrib", time: entry.prayerData.maghrib, isActive: entry.prayerData.currentPrayer == "Maghrib")
-                LockScreenPrayerRow(name: "Isha", time: entry.prayerData.isha, isActive: entry.prayerData.currentPrayer == "Isha")
+                LockScreenPrayerRow(name: "Asr", time: entry.prayerData.formatTime(entry.prayerData.asr), isActive: entry.prayerData.currentPrayer == "Asr")
+                LockScreenPrayerRow(name: "Maghrib", time: entry.prayerData.formatTime(entry.prayerData.maghrib), isActive: entry.prayerData.currentPrayer == "Maghrib")
+                LockScreenPrayerRow(name: "Isha", time: entry.prayerData.formatTime(entry.prayerData.isha), isActive: entry.prayerData.currentPrayer == "Isha")
             }
         case .accessoryInline:
             // Lock screen inline widget
@@ -218,10 +235,10 @@ struct EveningPrayerWidgetView: View {
     }
 
     private func getCurrentEveningTime() -> String {
-        if entry.prayerData.currentPrayer == "Asr" { return entry.prayerData.asr }
-        if entry.prayerData.currentPrayer == "Maghrib" { return entry.prayerData.maghrib }
-        if entry.prayerData.currentPrayer == "Isha" { return entry.prayerData.isha }
-        return entry.prayerData.asr
+        if entry.prayerData.currentPrayer == "Asr" { return entry.prayerData.formatTime(entry.prayerData.asr) }
+        if entry.prayerData.currentPrayer == "Maghrib" { return entry.prayerData.formatTime(entry.prayerData.maghrib) }
+        if entry.prayerData.currentPrayer == "Isha" { return entry.prayerData.formatTime(entry.prayerData.isha) }
+        return entry.prayerData.formatTime(entry.prayerData.asr)
     }
 }
 
@@ -266,6 +283,7 @@ struct WidgetPrayerRow: View {
                 .font(.system(size: 16, weight: isActive ? .semibold : .regular))
                 .foregroundColor(isActive ? accentColor : secondaryTextColor)
                 .lineLimit(1)
+                .minimumScaleFactor(0.7)
         }
     }
 }
@@ -277,13 +295,18 @@ struct AllPrayersWidgetView: View {
     @Environment(\.colorScheme) var colorScheme
 
     // Use dark mode for evening prayers (Maghrib, Isha) or if app/system is in dark mode
+    // If theme is set, use that prayer for determining dark mode
     private var effectiveIsDark: Bool {
-        let isEveningPrayer = entry.prayerData.currentPrayer == "Maghrib" || entry.prayerData.currentPrayer == "Isha"
+        let prayerForTheme = entry.prayerData.themePrayer ?? entry.prayerData.currentPrayer
+        let isEveningPrayer = prayerForTheme == "Maghrib" || prayerForTheme == "Isha"
         return isEveningPrayer || entry.prayerData.isDarkMode ?? (colorScheme == .dark)
     }
 
     var accentColor: Color {
-        PrayerThemeColors.accentColor(for: entry.prayerData.currentPrayer, isDark: effectiveIsDark)
+        if let hex = entry.prayerData.accentColor {
+            return Color(hex: hex)
+        }
+        return PrayerThemeColors.accentColor(for: entry.prayerData.currentPrayer, isDark: effectiveIsDark)
     }
 
     var backgroundColor: Color {
@@ -310,17 +333,17 @@ struct AllPrayersWidgetView: View {
             HStack(spacing: 16) {
                 // Left column: Fajr, Sunrise, Dhuhr
                 VStack(alignment: .leading, spacing: 8) {
-                    WidgetPrayerRow(name: "Fajr", time: entry.prayerData.fajr, isActive: entry.prayerData.currentPrayer == "Fajr", accentColor: accentColor, textColor: textColor, secondaryTextColor: secondaryTextColor)
-                    WidgetPrayerRow(name: "Sunrise", time: entry.prayerData.sunrise, isActive: entry.prayerData.currentPrayer == "Sunrise", accentColor: accentColor, textColor: textColor, secondaryTextColor: secondaryTextColor)
-                    WidgetPrayerRow(name: "Dhuhr", time: entry.prayerData.dhuhr, isActive: entry.prayerData.currentPrayer == "Dhuhr", accentColor: accentColor, textColor: textColor, secondaryTextColor: secondaryTextColor)
+                    WidgetPrayerRow(name: "Fajr", time: entry.prayerData.formatTime(entry.prayerData.fajr), isActive: entry.prayerData.currentPrayer == "Fajr", accentColor: accentColor, textColor: textColor, secondaryTextColor: secondaryTextColor)
+                    WidgetPrayerRow(name: "Sunrise", time: entry.prayerData.formatTime(entry.prayerData.sunrise), isActive: entry.prayerData.currentPrayer == "Sunrise", accentColor: accentColor, textColor: textColor, secondaryTextColor: secondaryTextColor)
+                    WidgetPrayerRow(name: "Dhuhr", time: entry.prayerData.formatTime(entry.prayerData.dhuhr), isActive: entry.prayerData.currentPrayer == "Dhuhr", accentColor: accentColor, textColor: textColor, secondaryTextColor: secondaryTextColor)
                 }
                 .frame(maxWidth: .infinity)
 
                 // Right column: Asr, Maghrib, Isha
                 VStack(alignment: .leading, spacing: 8) {
-                    WidgetPrayerRow(name: "Asr", time: entry.prayerData.asr, isActive: entry.prayerData.currentPrayer == "Asr", accentColor: accentColor, textColor: textColor, secondaryTextColor: secondaryTextColor)
-                    WidgetPrayerRow(name: "Maghrib", time: entry.prayerData.maghrib, isActive: entry.prayerData.currentPrayer == "Maghrib", accentColor: accentColor, textColor: textColor, secondaryTextColor: secondaryTextColor)
-                    WidgetPrayerRow(name: "Isha", time: entry.prayerData.isha, isActive: entry.prayerData.currentPrayer == "Isha", accentColor: accentColor, textColor: textColor, secondaryTextColor: secondaryTextColor)
+                    WidgetPrayerRow(name: "Asr", time: entry.prayerData.formatTime(entry.prayerData.asr), isActive: entry.prayerData.currentPrayer == "Asr", accentColor: accentColor, textColor: textColor, secondaryTextColor: secondaryTextColor)
+                    WidgetPrayerRow(name: "Maghrib", time: entry.prayerData.formatTime(entry.prayerData.maghrib), isActive: entry.prayerData.currentPrayer == "Maghrib", accentColor: accentColor, textColor: textColor, secondaryTextColor: secondaryTextColor)
+                    WidgetPrayerRow(name: "Isha", time: entry.prayerData.formatTime(entry.prayerData.isha), isActive: entry.prayerData.currentPrayer == "Isha", accentColor: accentColor, textColor: textColor, secondaryTextColor: secondaryTextColor)
                 }
                 .frame(maxWidth: .infinity)
             }
@@ -340,13 +363,18 @@ struct UpcomingPrayerWidgetView: View {
     @Environment(\.widgetFamily) var family
 
     // Use dark mode for evening prayers (Maghrib, Isha) or if app/system is in dark mode
+    // If theme is set, use that prayer for determining dark mode
     private var effectiveIsDark: Bool {
-        let isEveningPrayer = entry.prayerData.currentPrayer == "Maghrib" || entry.prayerData.currentPrayer == "Isha"
+        let prayerForTheme = entry.prayerData.themePrayer ?? entry.prayerData.currentPrayer
+        let isEveningPrayer = prayerForTheme == "Maghrib" || prayerForTheme == "Isha"
         return isEveningPrayer || entry.prayerData.isDarkMode ?? (colorScheme == .dark)
     }
 
     var accentColor: Color {
-        PrayerThemeColors.accentColor(for: entry.prayerData.currentPrayer, isDark: effectiveIsDark)
+        if let hex = entry.prayerData.accentColor {
+            return Color(hex: hex)
+        }
+        return PrayerThemeColors.accentColor(for: entry.prayerData.currentPrayer, isDark: effectiveIsDark)
     }
 
     var backgroundColor: Color {
@@ -367,12 +395,12 @@ struct UpcomingPrayerWidgetView: View {
 
     private var currentPrayerTime: String {
         switch entry.prayerData.currentPrayer {
-        case "Fajr": return entry.prayerData.fajr
-        case "Sunrise": return entry.prayerData.sunrise
-        case "Dhuhr": return entry.prayerData.dhuhr
-        case "Asr": return entry.prayerData.asr
-        case "Maghrib": return entry.prayerData.maghrib
-        case "Isha": return entry.prayerData.isha
+        case "Fajr": return entry.prayerData.formatTime(entry.prayerData.fajr)
+        case "Sunrise": return entry.prayerData.formatTime(entry.prayerData.sunrise)
+        case "Dhuhr": return entry.prayerData.formatTime(entry.prayerData.dhuhr)
+        case "Asr": return entry.prayerData.formatTime(entry.prayerData.asr)
+        case "Maghrib": return entry.prayerData.formatTime(entry.prayerData.maghrib)
+        case "Isha": return entry.prayerData.formatTime(entry.prayerData.isha)
         default: return "--:--"
         }
     }
@@ -403,12 +431,12 @@ struct UpcomingPrayerWidgetView: View {
 
     private var nextPrayerTime: String {
         switch entry.prayerData.currentPrayer {
-        case "Fajr": return entry.prayerData.sunrise
-        case "Sunrise": return entry.prayerData.dhuhr
-        case "Dhuhr": return entry.prayerData.asr
-        case "Asr": return entry.prayerData.maghrib
-        case "Maghrib": return entry.prayerData.isha
-        case "Isha": return entry.prayerData.tomorrowFajr ?? entry.prayerData.fajr
+        case "Fajr": return entry.prayerData.formatTime(entry.prayerData.sunrise)
+        case "Sunrise": return entry.prayerData.formatTime(entry.prayerData.dhuhr)
+        case "Dhuhr": return entry.prayerData.formatTime(entry.prayerData.asr)
+        case "Asr": return entry.prayerData.formatTime(entry.prayerData.maghrib)
+        case "Maghrib": return entry.prayerData.formatTime(entry.prayerData.isha)
+        case "Isha": return entry.prayerData.formatTime(entry.prayerData.tomorrowFajr ?? entry.prayerData.fajr)
         default: return "--:--"
         }
     }
@@ -651,7 +679,9 @@ struct PrayerWidgetsBundle: WidgetBundle {
             locationName: "Seattle, WA",
             lastUpdated: nil,
             accentColor: "#568FAF",
-            isDarkMode: false
+            isDarkMode: false,
+            themePrayer: nil,
+            timeFormat: "24h"
         )
     )
 }
@@ -673,7 +703,9 @@ struct PrayerWidgetsBundle: WidgetBundle {
             locationName: "Seattle, WA",
             lastUpdated: nil,
             accentColor: "#C39BD3",
-            isDarkMode: true
+            isDarkMode: true,
+            themePrayer: nil,
+            timeFormat: "24h"
         )
     )
 }
@@ -695,7 +727,9 @@ struct PrayerWidgetsBundle: WidgetBundle {
             locationName: "Seattle, WA",
             lastUpdated: nil,
             accentColor: "#55bddf",
-            isDarkMode: false
+            isDarkMode: false,
+            themePrayer: nil,
+            timeFormat: "24h"
         )
     )
 }
@@ -717,7 +751,9 @@ struct PrayerWidgetsBundle: WidgetBundle {
             locationName: "Seattle, WA",
             lastUpdated: nil,
             accentColor: "#ff9a13",
-            isDarkMode: false
+            isDarkMode: false,
+            themePrayer: nil,
+            timeFormat: "24h"
         )
     )
 }
