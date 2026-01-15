@@ -54,11 +54,76 @@ struct PrayerTimelineProvider: TimelineProvider {
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<PrayerTimelineEntry>) -> Void) {
-        let entry = loadPrayerData()
-        // Update every 15 minutes
-        let nextUpdate = Calendar.current.date(byAdding: .minute, value: 15, to: Date())!
-        let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
-        completion(timeline)
+        guard let userDefaults = UserDefaults(suiteName: appGroupId),
+              let data = userDefaults.data(forKey: "prayerTimes"),
+              let prayerData = try? JSONDecoder().decode(PrayerData.self, from: data) else {
+            let entry = PrayerTimelineEntry(date: Date(), prayerData: Self.defaultPrayerData)
+            let nextUpdate = Calendar.current.date(byAdding: .minute, value: 15, to: Date())!
+            completion(Timeline(entries: [entry], policy: .after(nextUpdate)))
+            return
+        }
+
+        var entries: [PrayerTimelineEntry] = []
+        let now = Date()
+        let calendar = Calendar.current
+        let todayStart = calendar.startOfDay(for: now)
+
+        // Prayer order for the day
+        let prayers: [(name: String, time: String)] = [
+            ("Fajr", prayerData.fajr),
+            ("Sunrise", prayerData.sunrise),
+            ("Dhuhr", prayerData.dhuhr),
+            ("Asr", prayerData.asr),
+            ("Maghrib", prayerData.maghrib),
+            ("Isha", prayerData.isha)
+        ]
+
+        // Parse "5:30 AM" to today's Date
+        func parseTime(_ timeStr: String) -> Date? {
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.dateFormat = "h:mm a"
+            guard let parsed = formatter.date(from: timeStr) else { return nil }
+            let comps = calendar.dateComponents([.hour, .minute], from: parsed)
+            return calendar.date(bySettingHour: comps.hour ?? 0, minute: comps.minute ?? 0, second: 0, of: todayStart)
+        }
+
+        // Find current prayer (most recent one that has passed)
+        var currentPrayerIndex = 0
+        for (index, prayer) in prayers.enumerated() {
+            if let prayerDate = parseTime(prayer.time), prayerDate <= now {
+                currentPrayerIndex = index
+            }
+        }
+
+        // Create entry for NOW with current prayer
+        let currentEntry = PrayerData(
+            fajr: prayerData.fajr, sunrise: prayerData.sunrise, dhuhr: prayerData.dhuhr,
+            asr: prayerData.asr, maghrib: prayerData.maghrib, isha: prayerData.isha,
+            tomorrowFajr: prayerData.tomorrowFajr,
+            currentPrayer: prayers[currentPrayerIndex].name,
+            locationName: prayerData.locationName, lastUpdated: prayerData.lastUpdated,
+            accentColor: prayerData.accentColor, isDarkMode: prayerData.isDarkMode
+        )
+        entries.append(PrayerTimelineEntry(date: now, prayerData: currentEntry))
+
+        // Create entries for each future prayer transition
+        for i in (currentPrayerIndex + 1)..<prayers.count {
+            guard let prayerDate = parseTime(prayers[i].time), prayerDate > now else { continue }
+            let entryData = PrayerData(
+                fajr: prayerData.fajr, sunrise: prayerData.sunrise, dhuhr: prayerData.dhuhr,
+                asr: prayerData.asr, maghrib: prayerData.maghrib, isha: prayerData.isha,
+                tomorrowFajr: prayerData.tomorrowFajr,
+                currentPrayer: prayers[i].name,
+                locationName: prayerData.locationName, lastUpdated: prayerData.lastUpdated,
+                accentColor: prayerData.accentColor, isDarkMode: prayerData.isDarkMode
+            )
+            entries.append(PrayerTimelineEntry(date: prayerDate, prayerData: entryData))
+        }
+
+        // Refresh at midnight for next day's data
+        let midnight = calendar.startOfDay(for: now).addingTimeInterval(86400)
+        completion(Timeline(entries: entries, policy: .after(midnight)))
     }
 
     private func loadPrayerData() -> PrayerTimelineEntry {
@@ -211,16 +276,14 @@ struct AllPrayersWidgetView: View {
     var entry: PrayerTimelineEntry
     @Environment(\.colorScheme) var colorScheme
 
-    // Use app's dark mode setting if available, otherwise fall back to system
+    // Use dark mode for evening prayers (Maghrib, Isha) or if app/system is in dark mode
     private var effectiveIsDark: Bool {
-        entry.prayerData.isDarkMode ?? (colorScheme == .dark)
+        let isEveningPrayer = entry.prayerData.currentPrayer == "Maghrib" || entry.prayerData.currentPrayer == "Isha"
+        return isEveningPrayer || entry.prayerData.isDarkMode ?? (colorScheme == .dark)
     }
 
     var accentColor: Color {
-        if let hex = entry.prayerData.accentColor {
-            return Color(hex: hex)
-        }
-        return effectiveIsDark ? Color(hex: "7EB8D8") : Color(hex: "568FAF")
+        PrayerThemeColors.accentColor(for: entry.prayerData.currentPrayer, isDark: effectiveIsDark)
     }
 
     var backgroundColor: Color {
@@ -276,16 +339,14 @@ struct UpcomingPrayerWidgetView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.widgetFamily) var family
 
-    // Use app's dark mode setting if available, otherwise fall back to system
+    // Use dark mode for evening prayers (Maghrib, Isha) or if app/system is in dark mode
     private var effectiveIsDark: Bool {
-        entry.prayerData.isDarkMode ?? (colorScheme == .dark)
+        let isEveningPrayer = entry.prayerData.currentPrayer == "Maghrib" || entry.prayerData.currentPrayer == "Isha"
+        return isEveningPrayer || entry.prayerData.isDarkMode ?? (colorScheme == .dark)
     }
 
     var accentColor: Color {
-        if let hex = entry.prayerData.accentColor {
-            return Color(hex: hex)
-        }
-        return effectiveIsDark ? Color(hex: "7EB8D8") : Color(hex: "568FAF")
+        PrayerThemeColors.accentColor(for: entry.prayerData.currentPrayer, isDark: effectiveIsDark)
     }
 
     var backgroundColor: Color {
@@ -440,6 +501,29 @@ struct PrayerRowView: View {
             Text(time)
                 .font(.system(size: 15, weight: isActive ? .semibold : .regular))
                 .foregroundColor(isActive ? accentColor : secondaryTextColor)
+        }
+    }
+}
+
+// MARK: - Prayer Theme Colors
+
+struct PrayerThemeColors {
+    static func accentColor(for prayer: String?, isDark: Bool) -> Color {
+        switch prayer {
+        case "Fajr":
+            return Color(hex: "568FAF")
+        case "Sunrise":
+            return Color(hex: "ff9a13")
+        case "Dhuhr":
+            return Color(hex: "55bddf")
+        case "Asr":
+            return Color(hex: "ff9a13")
+        case "Maghrib":
+            return Color(hex: "9B59B6")
+        case "Isha":
+            return Color(hex: "854ab4")
+        default:
+            return isDark ? Color(hex: "7EB8D8") : Color(hex: "568FAF")
         }
     }
 }
