@@ -15,27 +15,52 @@ export const usePrayerTimes = (location: Location.LocationObject | null) => {
   const [error, setError] = useState<string | null>(null);
 
   // Fetches prayer times when location or settings change
+  // Fetches previous, current, and next month for better carousel experience
   useEffect(() => {
     if (!location || settingsLoading) return;
 
     (async () => {
       setLoading(true);
       try {
-        // based off Prayer times for a Gregorian month API
-        const baseUrl = "https://api.aladhan.com/v1/";
+        const baseUrl = "https://api.aladhan.com/v1";
         const now = new Date();
-        const year = now.getFullYear();
-        const month = now.getMonth() + 1;
 
-        const data = await getPrayerDict(baseUrl, year, month, {
+        // Calculate previous, current, and next month/year
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth() + 1;
+
+        const prevDate = new Date(currentYear, currentMonth - 2, 1); // -2 because month is 0-indexed in Date constructor
+        const nextDate = new Date(currentYear, currentMonth, 1);
+
+        const months = [
+          { year: prevDate.getFullYear(), month: prevDate.getMonth() + 1 },
+          { year: currentYear, month: currentMonth },
+          { year: nextDate.getFullYear(), month: nextDate.getMonth() + 1 },
+        ];
+
+        const params = {
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,
           method: settings.method,
           school: settings.school,
           latitudeAdjustmentMethod: settings.latitudeAdjustmentMethod,
           tune: tuneSettingsToString(settings.tune),
-        });
-        setPrayerDict(data);
+        };
+
+        // Fetch all three months in parallel
+        const results = await Promise.all(
+          months.map(({ year, month }) =>
+            getPrayerDict(baseUrl, year, month, params)
+          )
+        );
+
+        // Combine all three months into a single dictionary
+        const combinedData = results.reduce(
+          (acc, monthData) => ({ ...acc, ...monthData }),
+          {}
+        );
+
+        setPrayerDict(combinedData);
       } catch (err: any) {
         const errorMessage = err?.message ?? "Failed to fetch prayer times";
         console.error("Prayer times fetch error:", errorMessage);
