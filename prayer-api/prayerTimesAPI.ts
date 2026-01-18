@@ -103,11 +103,18 @@ export const getPrayerDict = async (
         }
 
         url.search = queryParams.toString();
-        const response = await fetch(url.toString());
-        if (!response.ok) {
-            throw new Error(`Error fetching prayer times: ${response.statusText}`);
+
+        let response: Response;
+        try {
+            response = await fetch(url.toString());
+        } catch (networkError: any) {
+            throw new Error(`Network error: ${networkError?.message || 'Failed to connect'}`);
         }
-        
+
+        if (!response.ok) {
+            throw new Error(`Error fetching prayer times: ${response.status} ${response.statusText || 'Unknown error'}`);
+        }
+
         const data: PrayerTimesResponse = await response.json();
         if (data.code !== 200) {
             throw new Error(`API error: ${data.status}`);

@@ -20,14 +20,18 @@ if (Platform.OS === "ios") {
   }
 }
 
-export interface WidgetPrayerData {
+export interface DayPrayerTimes {
+  date: string; // ISO date YYYY-MM-DD
   fajr: string;
   sunrise: string;
   dhuhr: string;
   asr: string;
   maghrib: string;
   isha: string;
-  tomorrowFajr: string | null;
+}
+
+export interface WidgetPrayerData {
+  days: DayPrayerTimes[]; // 7 days of prayer times
   currentPrayer: string | null;
   locationName: string | null;
   lastUpdated: string;

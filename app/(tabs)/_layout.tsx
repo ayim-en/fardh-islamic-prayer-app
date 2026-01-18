@@ -10,7 +10,10 @@ import { useAnimatedBackgroundColor } from "@/hooks/useAnimatedColor";
 import { useLocation } from "@/hooks/useLocation";
 import { usePrayerTimes } from "@/hooks/usePrayerTimes";
 import { cleanTimeString } from "@/utils/prayerHelpers";
-import { updateWidgetPrayerTimes } from "@/utils/widgetStorage";
+import {
+  updateWidgetPrayerTimes,
+  DayPrayerTimes,
+} from "@/utils/widgetStorage";
 import { Tabs } from "expo-router";
 import React, { useEffect } from "react";
 import Animated from "react-native-reanimated";
@@ -60,26 +63,32 @@ export default function TabLayout() {
     }
   }, [currentPrayer, setColors, themePrayer, setCurrentPrayer]);
 
-  // Sync prayer times with iOS widget
+  // Sync prayer times with iOS widget (7 days of data for timeline)
   useEffect(() => {
     const todayPrayers = prayerDict[todayISO];
     if (todayPrayers?.timings) {
-      // Calculate tomorrow's date for Fajr time
-      const tomorrow = new Date(todayISO);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const tomorrowISO = tomorrow.toISOString().split("T")[0];
-      const tomorrowPrayers = prayerDict[tomorrowISO];
+      // Extract 7 days of prayer times starting from today
+      const days: DayPrayerTimes[] = [];
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(todayISO);
+        date.setDate(date.getDate() + i);
+        const isoDate = date.toISOString().split("T")[0];
+        const dayData = prayerDict[isoDate];
+        if (dayData?.timings) {
+          days.push({
+            date: isoDate,
+            fajr: cleanTimeString(dayData.timings.Fajr),
+            sunrise: cleanTimeString(dayData.timings.Sunrise),
+            dhuhr: cleanTimeString(dayData.timings.Dhuhr),
+            asr: cleanTimeString(dayData.timings.Asr),
+            maghrib: cleanTimeString(dayData.timings.Maghrib),
+            isha: cleanTimeString(dayData.timings.Isha),
+          });
+        }
+      }
 
       updateWidgetPrayerTimes({
-        fajr: cleanTimeString(todayPrayers.timings.Fajr),
-        sunrise: cleanTimeString(todayPrayers.timings.Sunrise),
-        dhuhr: cleanTimeString(todayPrayers.timings.Dhuhr),
-        asr: cleanTimeString(todayPrayers.timings.Asr),
-        maghrib: cleanTimeString(todayPrayers.timings.Maghrib),
-        isha: cleanTimeString(todayPrayers.timings.Isha),
-        tomorrowFajr: tomorrowPrayers?.timings?.Fajr
-          ? cleanTimeString(tomorrowPrayers.timings.Fajr)
-          : null,
+        days,
         currentPrayer: currentPrayer?.prayer || null,
         locationName: locationName || null,
         lastUpdated: new Date().toISOString(),

@@ -1,5 +1,9 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 import { useCallback, useEffect, useState } from "react";
+
+const LOCATION_STORAGE_KEY = "cachedLocation";
+const LOCATION_NAME_STORAGE_KEY = "cachedLocationName";
 
 export const useLocation = () => {
   const [location, setLocation] = useState<Location.LocationObject | null>(
@@ -29,6 +33,15 @@ export const useLocation = () => {
 
       let userLocation = await Location.getCurrentPositionAsync({});
       setLocation(userLocation);
+
+      // Cache location for background tasks
+      await AsyncStorage.setItem(
+        LOCATION_STORAGE_KEY,
+        JSON.stringify({
+          latitude: userLocation.coords.latitude,
+          longitude: userLocation.coords.longitude,
+        })
+      );
     } catch (err: any) {
       const errorMessage = err?.message ?? "Failed to get location";
       console.error("Location error:", errorMessage);
@@ -54,8 +67,13 @@ export const useLocation = () => {
 
         if (reverseGeocode.length > 0) {
           const { city, country } = reverseGeocode[0];
-          setCityName(city || "Unknown");
-          setLocationName(`${city || "Unknown"}, ${country || "Unknown"}`);
+          const cityValue = city || "Unknown";
+          const locationNameValue = `${city || "Unknown"}, ${country || "Unknown"}`;
+          setCityName(cityValue);
+          setLocationName(locationNameValue);
+
+          // Cache location name for background tasks
+          await AsyncStorage.setItem(LOCATION_NAME_STORAGE_KEY, locationNameValue);
         }
       } catch (err: any) {
         const errorMessage = err?.message ?? "Failed to get location name";

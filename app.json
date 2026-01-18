@@ -15,10 +15,14 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSLocationWhenInUseUsageDescription": "This app needs access to your location to show accurate prayer times for your area.",
-        "NSMotionUsageDescription": "This app uses motion sensors to provide an accurate Qibla compass direction."
+        "NSMotionUsageDescription": "This app uses motion sensors to provide an accurate Qibla compass direction.",
+        "BGTaskSchedulerPermittedIdentifiers": ["com.expo.modules.backgroundtask.processing"],
+        "UIBackgroundModes": ["processing"]
       },
       "entitlements": {
-        "com.apple.security.application-groups": ["group.com.ayimen.fardh"]
+        "com.apple.security.application-groups": [
+          "group.com.ayimen.fardh"
+        ]
       }
     },
     "notification": {
@@ -87,7 +91,8 @@
           }
         }
       ],
-      "@bacons/apple-targets"
+      "@bacons/apple-targets",
+      "expo-background-task"
     ],
     "experiments": {
       "typedRoutes": true,

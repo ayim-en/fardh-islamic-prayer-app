@@ -8,14 +8,18 @@ struct PrayerTime: Codable {
     let time: String
 }
 
-struct PrayerData: Codable {
+struct DayPrayerTimes: Codable {
+    let date: String // ISO date YYYY-MM-DD
     let fajr: String
     let sunrise: String
     let dhuhr: String
     let asr: String
     let maghrib: String
     let isha: String
-    let tomorrowFajr: String?
+}
+
+struct PrayerData: Codable {
+    let days: [DayPrayerTimes] // 7 days of prayer times
     let currentPrayer: String?
     let locationName: String?
     let lastUpdated: String?
@@ -26,6 +30,25 @@ struct PrayerData: Codable {
     let themePrayer: String?
     // Time format preference
     let timeFormat: String?
+
+    // Helper to get today's prayers (first day in array)
+    var todayPrayers: DayPrayerTimes? {
+        return days.first
+    }
+
+    // Convenience accessors for today's times (for backwards compatibility with views)
+    var fajr: String { todayPrayers?.fajr ?? "--:--" }
+    var sunrise: String { todayPrayers?.sunrise ?? "--:--" }
+    var dhuhr: String { todayPrayers?.dhuhr ?? "--:--" }
+    var asr: String { todayPrayers?.asr ?? "--:--" }
+    var maghrib: String { todayPrayers?.maghrib ?? "--:--" }
+    var isha: String { todayPrayers?.isha ?? "--:--" }
+
+    // Helper to get tomorrow's fajr (for next prayer display after Isha)
+    var tomorrowFajr: String? {
+        guard days.count > 1 else { return nil }
+        return days[1].fajr
+    }
 
     // Helper to format time based on preference
     func formatTime(_ time: String) -> String {
@@ -50,13 +73,15 @@ struct PrayerTimelineProvider: TimelineProvider {
     let appGroupId = "group.com.ayimen.fardh"
 
     private static let defaultPrayerData = PrayerData(
-        fajr: "--:--",
-        sunrise: "--:--",
-        dhuhr: "--:--",
-        asr: "--:--",
-        maghrib: "--:--",
-        isha: "--:--",
-        tomorrowFajr: nil,
+        days: [DayPrayerTimes(
+            date: "",
+            fajr: "--:--",
+            sunrise: "--:--",
+            dhuhr: "--:--",
+            asr: "--:--",
+            maghrib: "--:--",
+            isha: "--:--"
+        )],
         currentPrayer: nil,
         locationName: "Open app to sync",
         lastUpdated: nil,
@@ -78,7 +103,8 @@ struct PrayerTimelineProvider: TimelineProvider {
     func getTimeline(in context: Context, completion: @escaping (Timeline<PrayerTimelineEntry>) -> Void) {
         guard let userDefaults = UserDefaults(suiteName: appGroupId),
               let data = userDefaults.data(forKey: "prayerTimes"),
-              let prayerData = try? JSONDecoder().decode(PrayerData.self, from: data) else {
+              let prayerData = try? JSONDecoder().decode(PrayerData.self, from: data),
+              !prayerData.days.isEmpty else {
             let entry = PrayerTimelineEntry(date: Date(), prayerData: Self.defaultPrayerData)
             let nextUpdate = Calendar.current.date(byAdding: .minute, value: 15, to: Date())!
             completion(Timeline(entries: [entry], policy: .after(nextUpdate)))
@@ -88,59 +114,86 @@ struct PrayerTimelineProvider: TimelineProvider {
         var entries: [PrayerTimelineEntry] = []
         let now = Date()
         let calendar = Calendar.current
-        let todayStart = calendar.startOfDay(for: now)
 
-        // Prayer order for the day
-        let prayers: [(name: String, time: String)] = [
-            ("Fajr", prayerData.fajr),
-            ("Sunrise", prayerData.sunrise),
-            ("Dhuhr", prayerData.dhuhr),
-            ("Asr", prayerData.asr),
-            ("Maghrib", prayerData.maghrib),
-            ("Isha", prayerData.isha)
-        ]
+        // Prayer names in order
+        let prayerNames = ["Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Isha"]
 
-        // Parse "17:30" to today's Date
-        func parseTime(_ timeStr: String) -> Date? {
-            let formatter = DateFormatter()
-            formatter.locale = Locale(identifier: "en_US_POSIX")
-            formatter.dateFormat = "HH:mm"
-            guard let parsed = formatter.date(from: timeStr) else { return nil }
+        // Date formatter for parsing ISO dates
+        let isoFormatter = DateFormatter()
+        isoFormatter.locale = Locale(identifier: "en_US_POSIX")
+        isoFormatter.dateFormat = "yyyy-MM-dd"
+
+        // Time formatter
+        let timeFormatter = DateFormatter()
+        timeFormatter.locale = Locale(identifier: "en_US_POSIX")
+        timeFormatter.dateFormat = "HH:mm"
+
+        // Parse time string to Date for a given day
+        func parseTime(_ timeStr: String, on dayDate: Date) -> Date? {
+            guard let parsed = timeFormatter.date(from: timeStr) else { return nil }
             let comps = calendar.dateComponents([.hour, .minute], from: parsed)
-            return calendar.date(bySettingHour: comps.hour ?? 0, minute: comps.minute ?? 0, second: 0, of: todayStart)
+            let dayStart = calendar.startOfDay(for: dayDate)
+            return calendar.date(bySettingHour: comps.hour ?? 0, minute: comps.minute ?? 0, second: 0, of: dayStart)
+        }
+
+        // Get prayer time from day data
+        func getPrayerTime(_ prayerName: String, from day: DayPrayerTimes) -> String {
+            switch prayerName {
+            case "Fajr": return day.fajr
+            case "Sunrise": return day.sunrise
+            case "Dhuhr": return day.dhuhr
+            case "Asr": return day.asr
+            case "Maghrib": return day.maghrib
+            case "Isha": return day.isha
+            default: return "--:--"
+            }
         }
 
         // Use app's currentPrayer for NOW entry
         entries.append(PrayerTimelineEntry(date: now, prayerData: prayerData))
 
-        // Find index of current prayer for future entries
-        var currentPrayerIndex = 0
-        for (index, prayer) in prayers.enumerated() {
-            if prayer.name == prayerData.currentPrayer {
-                currentPrayerIndex = index
-                break
+        // Generate entries for all prayers across all 7 days
+        for (dayIndex, day) in prayerData.days.enumerated() {
+            guard let dayDate = isoFormatter.date(from: day.date) else { continue }
+
+            for prayerName in prayerNames {
+                let timeStr = getPrayerTime(prayerName, from: day)
+                guard let prayerDate = parseTime(timeStr, on: dayDate), prayerDate > now else { continue }
+
+                // Create entry data with updated currentPrayer
+                // Shift the days array so that the current day is first
+                var shiftedDays = Array(prayerData.days.dropFirst(dayIndex))
+                // Add remaining days from the beginning if needed (wrap around)
+                if shiftedDays.count < prayerData.days.count {
+                    shiftedDays.append(contentsOf: prayerData.days.prefix(dayIndex))
+                }
+
+                let entryData = PrayerData(
+                    days: shiftedDays,
+                    currentPrayer: prayerName,
+                    locationName: prayerData.locationName,
+                    lastUpdated: prayerData.lastUpdated,
+                    accentColor: prayerData.accentColor,
+                    isDarkMode: prayerData.isDarkMode,
+                    themePrayer: prayerData.themePrayer,
+                    timeFormat: prayerData.timeFormat
+                )
+                entries.append(PrayerTimelineEntry(date: prayerDate, prayerData: entryData))
             }
         }
 
-        // Create entries for each future prayer transition
-        for i in (currentPrayerIndex + 1)..<prayers.count {
-            guard let prayerDate = parseTime(prayers[i].time), prayerDate > now else { continue }
-            let entryData = PrayerData(
-                fajr: prayerData.fajr, sunrise: prayerData.sunrise, dhuhr: prayerData.dhuhr,
-                asr: prayerData.asr, maghrib: prayerData.maghrib, isha: prayerData.isha,
-                tomorrowFajr: prayerData.tomorrowFajr,
-                currentPrayer: prayers[i].name,
-                locationName: prayerData.locationName, lastUpdated: prayerData.lastUpdated,
-                accentColor: prayerData.accentColor, isDarkMode: prayerData.isDarkMode,
-                themePrayer: prayerData.themePrayer,
-                timeFormat: prayerData.timeFormat
-            )
-            entries.append(PrayerTimelineEntry(date: prayerDate, prayerData: entryData))
+        // Sort entries by date
+        entries.sort { $0.date < $1.date }
+
+        // Set refresh policy: refresh when data expires (after 7 days) or if no entries
+        let lastDay = prayerData.days.last
+        var refreshDate = calendar.date(byAdding: .day, value: 7, to: now)!
+        if let lastDayStr = lastDay?.date, let lastDayDate = isoFormatter.date(from: lastDayStr) {
+            // Refresh at midnight after the last day of data
+            refreshDate = calendar.startOfDay(for: lastDayDate).addingTimeInterval(86400)
         }
 
-        // Refresh at midnight for next day's data
-        let midnight = calendar.startOfDay(for: now).addingTimeInterval(86400)
-        completion(Timeline(entries: entries, policy: .after(midnight)))
+        completion(Timeline(entries: entries, policy: .after(refreshDate)))
     }
 
     private func loadPrayerData() -> PrayerTimelineEntry {
@@ -662,19 +715,34 @@ struct PrayerWidgetsBundle: WidgetBundle {
 
 // MARK: - Previews
 
+// Sample prayer day for previews
+private let previewDay = DayPrayerTimes(
+    date: "2025-01-18",
+    fajr: "05:30",
+    sunrise: "06:45",
+    dhuhr: "12:30",
+    asr: "15:45",
+    maghrib: "18:15",
+    isha: "19:45"
+)
+
+private let previewDay2 = DayPrayerTimes(
+    date: "2025-01-19",
+    fajr: "05:32",
+    sunrise: "06:46",
+    dhuhr: "12:31",
+    asr: "15:46",
+    maghrib: "18:16",
+    isha: "19:46"
+)
+
 #Preview("Morning Widget", as: .accessoryRectangular) {
     MorningPrayerWidget()
 } timeline: {
     PrayerTimelineEntry(
         date: Date(),
         prayerData: PrayerData(
-            fajr: "5:30 AM",
-            sunrise: "6:45 AM",
-            dhuhr: "12:30 PM",
-            asr: "3:45 PM",
-            maghrib: "6:15 PM",
-            isha: "7:45 PM",
-            tomorrowFajr: "5:32 AM",
+            days: [previewDay, previewDay2],
             currentPrayer: "Fajr",
             locationName: "Seattle, WA",
             lastUpdated: nil,
@@ -692,13 +760,7 @@ struct PrayerWidgetsBundle: WidgetBundle {
     PrayerTimelineEntry(
         date: Date(),
         prayerData: PrayerData(
-            fajr: "5:30 AM",
-            sunrise: "6:45 AM",
-            dhuhr: "12:30 PM",
-            asr: "3:45 PM",
-            maghrib: "6:15 PM",
-            isha: "7:45 PM",
-            tomorrowFajr: "5:32 AM",
+            days: [previewDay, previewDay2],
             currentPrayer: "Maghrib",
             locationName: "Seattle, WA",
             lastUpdated: nil,
@@ -716,13 +778,7 @@ struct PrayerWidgetsBundle: WidgetBundle {
     PrayerTimelineEntry(
         date: Date(),
         prayerData: PrayerData(
-            fajr: "5:30 AM",
-            sunrise: "6:45 AM",
-            dhuhr: "12:30 PM",
-            asr: "3:45 PM",
-            maghrib: "6:15 PM",
-            isha: "7:45 PM",
-            tomorrowFajr: "5:32 AM",
+            days: [previewDay, previewDay2],
             currentPrayer: "Dhuhr",
             locationName: "Seattle, WA",
             lastUpdated: nil,
@@ -740,13 +796,7 @@ struct PrayerWidgetsBundle: WidgetBundle {
     PrayerTimelineEntry(
         date: Date(),
         prayerData: PrayerData(
-            fajr: "5:30 AM",
-            sunrise: "6:45 AM",
-            dhuhr: "12:30 PM",
-            asr: "3:45 PM",
-            maghrib: "6:15 PM",
-            isha: "7:45 PM",
-            tomorrowFajr: "5:32 AM",
+            days: [previewDay, previewDay2],
             currentPrayer: "Asr",
             locationName: "Seattle, WA",
             lastUpdated: nil,
