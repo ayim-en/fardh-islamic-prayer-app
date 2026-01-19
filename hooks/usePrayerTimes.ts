@@ -8,6 +8,10 @@ import { useFocusEffect } from "@react-navigation/native";
 import * as Location from "expo-location";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+// Helper to delay between API requests
+const delay = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
+
 export const usePrayerTimes = (location: Location.LocationObject | null) => {
   const { settings, loading: settingsLoading } = usePrayerSettings();
   const [prayerDict, setPrayerDict] = useState<PrayerDict>({});
@@ -47,18 +51,29 @@ export const usePrayerTimes = (location: Location.LocationObject | null) => {
           tune: tuneSettingsToString(settings.tune),
         };
 
-        // Fetch all three months in parallel
-        const results = await Promise.all(
-          months.map(({ year, month }) =>
-            getPrayerDict(baseUrl, year, month, params)
-          )
+        // Fetch current month first (priority)
+        const currentMonthData = await getPrayerDict(
+          baseUrl,
+          currentYear,
+          currentMonth,
+          params
         );
 
-        // Combine all three months into a single dictionary
-        const combinedData = results.reduce(
-          (acc, monthData) => ({ ...acc, ...monthData }),
-          {}
-        );
+        // Set current month data immediately so UI can render
+        setPrayerDict(currentMonthData);
+
+        // Fetch previous and next months sequentially with delay to avoid rate limiting
+        let combinedData = { ...currentMonthData };
+
+        for (const { year, month } of [months[0], months[2]]) {
+          try {
+            await delay(150); // Small delay between requests
+            const monthData = await getPrayerDict(baseUrl, year, month, params);
+            combinedData = { ...combinedData, ...monthData };
+          } catch (error) {
+            console.warn(`[usePrayerTimes] Skipping month ${month}/${year}:`, error);
+          }
+        }
 
         setPrayerDict(combinedData);
       } catch (err: any) {
