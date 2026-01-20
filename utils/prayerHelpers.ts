@@ -120,6 +120,35 @@ export const prayerTimeToMinutes = (prayerTime: string): number => {
   return hours * 60 + minutes;
 };
 
+// Determines the current prayer from a single day's times
+// Returns the prayer that has started most recently based on current time
+export const getCurrentPrayerFromDay = (
+  dayTimes: { fajr: string; sunrise: string; dhuhr: string; asr: string; maghrib: string; isha: string },
+  now: Date
+): string | null => {
+  const prayers = [
+    { name: "Fajr", time: dayTimes.fajr },
+    { name: "Sunrise", time: dayTimes.sunrise },
+    { name: "Dhuhr", time: dayTimes.dhuhr },
+    { name: "Asr", time: dayTimes.asr },
+    { name: "Maghrib", time: dayTimes.maghrib },
+    { name: "Isha", time: dayTimes.isha },
+  ];
+
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  let currentPrayer: string | null = null;
+
+  for (const prayer of prayers) {
+    const prayerMinutes = prayerTimeToMinutes(prayer.time);
+    if (currentMinutes >= prayerMinutes) {
+      currentPrayer = prayer.name;
+    } else {
+      break;
+    }
+  }
+  return currentPrayer;
+};
+
 // Determines the current prayer based on current time
 // Returns the prayer that has started most recently (its time has passed)
 export const getCurrentPrayer = (

@@ -158,7 +158,9 @@ struct PrayerTimelineProvider: TimelineProvider {
 
             for prayerName in prayerNames {
                 let timeStr = getPrayerTime(prayerName, from: day)
-                guard let prayerDate = parseTime(timeStr, on: dayDate), prayerDate > now else { continue }
+                guard let prayerDate = parseTime(timeStr, on: dayDate) else { continue }
+                // Skip prayers that passed more than 1 minute ago (buffer for transition)
+                if prayerDate.addingTimeInterval(60) <= now { continue }
 
                 // Create entry data with updated currentPrayer
                 // Shift the days array so that the current day is first
@@ -625,7 +627,7 @@ extension Color {
         case 8: // ARGB (32-bit)
             (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
         default:
-            (a, r, g, b) = (1, 1, 1, 0)
+            (a, r, g, b) = (255, 0x56, 0x8F, 0xAF) // Fallback to Fajr blue #568FAF
         }
         self.init(
             .sRGB,

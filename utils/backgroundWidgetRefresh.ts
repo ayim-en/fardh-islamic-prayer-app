@@ -2,9 +2,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as BackgroundTask from "expo-background-task";
 import * as TaskManager from "expo-task-manager";
 import { Platform } from "react-native";
-import { tuneSettingsToString } from "@/constants/prayerSettings";
+import { DEFAULT_PRAYER_SETTINGS, tuneSettingsToString } from "@/constants/prayerSettings";
 import { getPrayerDict, PrayerTimesParams } from "@/prayer-api/prayerTimesAPI";
-import { cleanTimeString } from "./prayerHelpers";
+import { cleanTimeString, getCurrentPrayerFromDay } from "./prayerHelpers";
 import {
   DayPrayerTimes,
   WidgetPrayerData,
@@ -27,9 +27,11 @@ TaskManager.defineTask(BACKGROUND_TASK_NAME, async () => {
 
     const location = JSON.parse(locationStr);
 
-    // Load prayer settings
+    // Load prayer settings with defaults
     const settingsStr = await AsyncStorage.getItem("prayerSettings");
-    const settings = settingsStr ? JSON.parse(settingsStr) : {};
+    const settings = settingsStr
+      ? { ...DEFAULT_PRAYER_SETTINGS, ...JSON.parse(settingsStr) }
+      : DEFAULT_PRAYER_SETTINGS;
 
     // Build params for API
     const params: PrayerTimesParams = {
@@ -107,8 +109,8 @@ TaskManager.defineTask(BACKGROUND_TASK_NAME, async () => {
       AsyncStorage.getItem("cachedLocationName"),
     ]);
 
-    // Determine current prayer based on time
-    const currentPrayer = getCurrentPrayer(days[0], now);
+    // Determine current prayer based on time (use shared logic)
+    const currentPrayer = getCurrentPrayerFromDay(days[0], now) || "Isha";
 
     // Get theme colors based on current prayer
     const { accentColor, isDarkMode } = getThemeForPrayer(
@@ -136,34 +138,6 @@ TaskManager.defineTask(BACKGROUND_TASK_NAME, async () => {
     return BackgroundTask.BackgroundTaskResult.Failed;
   }
 });
-
-// Helper to determine current prayer based on time
-function getCurrentPrayer(day: DayPrayerTimes, now: Date): string | null {
-  const prayers = [
-    { name: "Fajr", time: day.fajr },
-    { name: "Sunrise", time: day.sunrise },
-    { name: "Dhuhr", time: day.dhuhr },
-    { name: "Asr", time: day.asr },
-    { name: "Maghrib", time: day.maghrib },
-    { name: "Isha", time: day.isha },
-  ];
-
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
-
-  // Find the current prayer (the last prayer time that has passed)
-  let currentPrayer = "Isha"; // Default to Isha (previous day's)
-  for (const prayer of prayers) {
-    const [hours, minutes] = prayer.time.split(":").map(Number);
-    const prayerMinutes = hours * 60 + minutes;
-    if (currentMinutes >= prayerMinutes) {
-      currentPrayer = prayer.name;
-    } else {
-      break;
-    }
-  }
-
-  return currentPrayer;
-}
 
 // Helper to get theme colors for a prayer
 function getThemeForPrayer(prayer: string | null): {

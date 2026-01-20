@@ -58,6 +58,9 @@ export const updateWidgetPrayerTimes = async (
   try {
     storageInstance.set(PRAYER_TIMES_KEY, data);
 
+    // Small delay to ensure data is flushed before widget reload
+    await new Promise(resolve => setTimeout(resolve, 50));
+
     // Reload all widgets
     ExtensionStorageClass.reloadWidget("MorningPrayerWidget");
     ExtensionStorageClass.reloadWidget("EveningPrayerWidget");
@@ -66,7 +69,7 @@ export const updateWidgetPrayerTimes = async (
 
     return true;
   } catch (error) {
-    console.error("Failed to update widget prayer times:", error);
+    console.error("[WidgetStorage] Failed to update:", error);
     return false;
   }
 };
