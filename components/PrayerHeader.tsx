@@ -48,7 +48,10 @@ export const PrayerHeader = ({
             textShadowColor: "rgba(0,0,0,0.4)",
             textShadowOffset: { width: 0, height: 2 },
             textShadowRadius: 4,
+            paddingHorizontal: 16,
           }}
+          numberOfLines={1}
+          adjustsFontSizeToFit
         >
           {currentPrayer
             ? currentPrayer.prayer === "Sunrise"

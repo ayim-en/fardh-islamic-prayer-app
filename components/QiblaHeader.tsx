@@ -58,7 +58,9 @@ export const QiblaHeader = ({
           />
           <Animated.Text
             className="font-bold text-2xl"
-            style={animatedTextStyle}
+            style={[animatedTextStyle, { flexShrink: 1 }]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
           >
             {locationName}
           </Animated.Text>

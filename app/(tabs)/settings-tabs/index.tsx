@@ -497,7 +497,7 @@ export default function SettingsHome() {
   return (
     <View className="flex-1" style={{ backgroundColor: bgColor }}>
       <AnimatedCrossfadeImage source={backgroundImage} resizeMode="cover" />
-      <View className="pt-32 pb-4 items-center">
+      <View className="pt-32 pb-4 items-center px-4">
         <Animated.Text
           className="text-8xl font-bold text-white"
           style={{
@@ -505,6 +505,8 @@ export default function SettingsHome() {
             textShadowOffset: { width: 0, height: 2 },
             textShadowRadius: 4,
           }}
+          numberOfLines={1}
+          adjustsFontSizeToFit
         >
           Settings
         </Animated.Text>
