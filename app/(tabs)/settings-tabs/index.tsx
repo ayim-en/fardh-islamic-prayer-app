@@ -61,6 +61,8 @@ export default function SettingsHome() {
   const {
     masterToggle,
     toggleMasterNotifications,
+    adhanMasterToggle,
+    toggleAdhanMaster,
     adhanEnabled,
     toggleAdhan,
   } = useNotificationSettings();
@@ -178,6 +180,8 @@ export default function SettingsHome() {
             <NotificationSettings
               masterToggle={masterToggle}
               toggleMasterNotifications={toggleMasterNotifications}
+              adhanMasterToggle={adhanMasterToggle}
+              toggleAdhanMaster={toggleAdhanMaster}
               adhanEnabled={adhanEnabled}
               toggleAdhan={toggleAdhan}
               colors={colors}

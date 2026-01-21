@@ -10,8 +10,10 @@ export const useNotifications = (prayerDict: PrayerDict = {}) => {
   const {
     masterToggle,
     notificationsEnabled,
+    adhanMasterToggle,
     adhanEnabled,
     toggleNotification,
+    toggleAdhanMaster,
     toggleAdhan,
     toggleMasterNotifications,
     loading,
@@ -27,17 +29,21 @@ export const useNotifications = (prayerDict: PrayerDict = {}) => {
       Object.keys(prayerDict).length > 0 &&
       Object.values(notificationsEnabled).some((enabled) => enabled)
     ) {
-      scheduleAllPrayerNotifications(prayerDict, notificationsEnabled, adhanEnabled);
+      // Only pass adhanEnabled if adhanMasterToggle is on
+      const effectiveAdhanEnabled = adhanMasterToggle ? adhanEnabled : {};
+      scheduleAllPrayerNotifications(prayerDict, notificationsEnabled, effectiveAdhanEnabled);
     } else if (!masterToggle) {
       // Cancel all if master toggle is off
       cancelAllPrayerNotifications();
     }
-  }, [prayerDict, notificationsEnabled, adhanEnabled, masterToggle, loading]);
+  }, [prayerDict, notificationsEnabled, adhanMasterToggle, adhanEnabled, masterToggle, loading]);
 
   return {
     notificationsEnabled,
+    adhanMasterToggle,
     adhanEnabled,
     toggleNotification,
+    toggleAdhanMaster,
     toggleAdhan,
     masterToggle,
     toggleMasterNotifications,

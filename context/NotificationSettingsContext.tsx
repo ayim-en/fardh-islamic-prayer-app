@@ -8,14 +8,17 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 
 const NOTIFICATIONS_ENABLED_KEY = "prayerNotifications";
 const MASTER_TOGGLE_KEY = "notificationsMasterToggle";
+const ADHAN_MASTER_TOGGLE_KEY = "adhanMasterToggle";
 const ADHAN_ENABLED_KEY = "adhanEnabled";
 
 interface NotificationSettingsContextType {
   masterToggle: boolean;
   notificationsEnabled: Record<string, boolean>;
+  adhanMasterToggle: boolean;
   adhanEnabled: Record<string, boolean>;
   toggleMasterNotifications: () => Promise<void>;
   toggleNotification: (prayer: string) => Promise<void>;
+  toggleAdhanMaster: () => Promise<void>;
   toggleAdhan: (prayer: string) => Promise<void>;
   loading: boolean;
 }
@@ -31,6 +34,7 @@ export const NotificationSettingsProvider: React.FC<{
   const [notificationsEnabled, setNotificationsEnabled] = useState<
     Record<string, boolean>
   >({});
+  const [adhanMasterToggle, setAdhanMasterToggle] = useState(false);
   const [adhanEnabled, setAdhanEnabled] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
 
@@ -38,10 +42,11 @@ export const NotificationSettingsProvider: React.FC<{
   useEffect(() => {
     (async () => {
       try {
-        const [savedNotifications, savedMasterToggle, savedAdhan] =
+        const [savedNotifications, savedMasterToggle, savedAdhanMaster, savedAdhan] =
           await Promise.all([
             AsyncStorage.getItem(NOTIFICATIONS_ENABLED_KEY),
             AsyncStorage.getItem(MASTER_TOGGLE_KEY),
+            AsyncStorage.getItem(ADHAN_MASTER_TOGGLE_KEY),
             AsyncStorage.getItem(ADHAN_ENABLED_KEY),
           ]);
         if (savedNotifications) {
@@ -49,6 +54,9 @@ export const NotificationSettingsProvider: React.FC<{
         }
         if (savedMasterToggle !== null) {
           setMasterToggle(JSON.parse(savedMasterToggle));
+        }
+        if (savedAdhanMaster !== null) {
+          setAdhanMasterToggle(JSON.parse(savedAdhanMaster));
         }
         if (savedAdhan) {
           setAdhanEnabled(JSON.parse(savedAdhan));
@@ -143,6 +151,21 @@ export const NotificationSettingsProvider: React.FC<{
     }
   };
 
+  // Toggles master adhan on/off
+  const toggleAdhanMaster = async () => {
+    const willBeEnabled = !adhanMasterToggle;
+    setAdhanMasterToggle(willBeEnabled);
+
+    try {
+      await AsyncStorage.setItem(
+        ADHAN_MASTER_TOGGLE_KEY,
+        JSON.stringify(willBeEnabled)
+      );
+    } catch (err: any) {
+      console.error("AsyncStorage save error:", err?.message ?? err);
+    }
+  };
+
   // Toggles adhan for a specific prayer
   const toggleAdhan = async (prayer: string) => {
     // No adhan for Sunrise
@@ -164,9 +187,11 @@ export const NotificationSettingsProvider: React.FC<{
       value={{
         masterToggle,
         notificationsEnabled,
+        adhanMasterToggle,
         adhanEnabled,
         toggleMasterNotifications,
         toggleNotification,
+        toggleAdhanMaster,
         toggleAdhan,
         loading,
       }}
