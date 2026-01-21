@@ -27,7 +27,8 @@
     },
     "notification": {
       "icon": "./assets/images/fardh-icon.png",
-      "color": "#568FAF"
+      "color": "#568FAF",
+      "sounds": ["./assets/audio/adhan_mishary_rashid_alafasy.caf"]
     },
     "android": {
       "adaptiveIcon": {

@@ -59,7 +59,8 @@ export const schedulePrayerNotification = async (
   prayer: string,
   prayerTime: Date,
   isoDate: string,
-  timeString: string
+  timeString: string,
+  useAdhan: boolean = false
 ): Promise<string | null> => {
   try {
     // Don't schedule if the time has already passed
@@ -76,7 +77,7 @@ export const schedulePrayerNotification = async (
       content: {
         title,
         body,
-        sound: "default",
+        sound: useAdhan ? "adhan_mishary_rashid_alafasy.caf" : "default",
         data: { prayer, date: isoDate },
       },
       trigger: {
@@ -114,7 +115,8 @@ export const cancelPrayerNotifications = async (prayer: string): Promise<void> =
 // Schedule notifications for all enabled prayers based on prayer times
 export const scheduleAllPrayerNotifications = async (
   prayerDict: PrayerDict,
-  enabledPrayers: Record<string, boolean>
+  enabledPrayers: Record<string, boolean>,
+  adhanEnabled: Record<string, boolean> = {}
 ): Promise<void> => {
   // Cancel all existing prayer notifications first
   await cancelAllPrayerNotifications();
@@ -142,7 +144,8 @@ export const scheduleAllPrayerNotifications = async (
       if (!timeString) continue;
 
       const prayerTime = parsePrayerTime(isoDate, timeString);
-      await schedulePrayerNotification(prayer, prayerTime, isoDate, timeString);
+      const useAdhan = adhanEnabled[prayer] ?? false;
+      await schedulePrayerNotification(prayer, prayerTime, isoDate, timeString, useAdhan);
     }
   }
 

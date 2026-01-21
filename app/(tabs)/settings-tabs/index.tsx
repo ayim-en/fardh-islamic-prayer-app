@@ -1,6 +1,7 @@
 import { AnimatedCrossfadeImage } from "@/components/AnimatedCrossfadeImage";
 import { AnimatedTintIcon } from "@/components/AnimatedTintIcon";
 import { CalendarSettingsComponent } from "@/components/CalendarSettings";
+import { NotificationSettings } from "@/components/NotificationSettings";
 import { PermissionsSettings } from "@/components/PermissionsSettings";
 import { PrayerTimesSettings } from "@/components/PrayerTimesSettings";
 import { ThemesSettings } from "@/components/ThemesSettings";
@@ -57,7 +58,12 @@ export default function SettingsHome() {
   const { settings, updateSettings, updateAllTune } = usePrayerSettings();
   const { settings: calendarSettings, updateSettings: updateCalendarSettings } =
     useCalendarSettings();
-  const { masterToggle, toggleMasterNotifications } = useNotificationSettings();
+  const {
+    masterToggle,
+    toggleMasterNotifications,
+    adhanEnabled,
+    toggleAdhan,
+  } = useNotificationSettings();
   const { resetWalkthrough } = useWalkthrough();
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set()
@@ -162,19 +168,38 @@ export default function SettingsHome() {
       ],
     },
     {
+      id: "notifications",
+      title: "Notifications",
+      icon: require("../../../assets/images/prayer-pro-icons/settings-tab/settings-notifications.png"),
+      data: [
+        {
+          id: "notifications-content",
+          content: (
+            <NotificationSettings
+              masterToggle={masterToggle}
+              toggleMasterNotifications={toggleMasterNotifications}
+              adhanEnabled={adhanEnabled}
+              toggleAdhan={toggleAdhan}
+              colors={colors}
+              animatedTextStyle={animatedTextStyle}
+              animatedSecondaryTextStyle={animatedSecondaryTextStyle}
+              animatedSeparatorStyle={animatedSeparatorStyle}
+            />
+          ),
+        },
+      ],
+    },
+    {
       id: "permissions",
       title: "Permissions",
-      icon: require("../../../assets/images/prayer-pro-icons/settings-tab/settings-notifications.png"),
+      icon: require("../../../assets/images/prayer-pro-icons/settings-tab/settings-permissions.png"),
       data: [
         {
           id: "permissions-content",
           content: (
             <PermissionsSettings
-              masterToggle={masterToggle}
-              toggleMasterNotifications={toggleMasterNotifications}
               colors={colors}
               animatedTextStyle={animatedTextStyle}
-              animatedActiveTextStyle={animatedActiveTextStyle}
               animatedSecondaryTextStyle={animatedSecondaryTextStyle}
               animatedSeparatorStyle={animatedSeparatorStyle}
             />

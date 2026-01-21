@@ -5,21 +5,15 @@ import { Linking, Platform, Switch, View } from "react-native";
 import Animated from "react-native-reanimated";
 
 interface PermissionsSettingsProps {
-  masterToggle: boolean;
-  toggleMasterNotifications: () => void;
   colors: { active: string; inactive: string };
   animatedTextStyle: any;
-  animatedActiveTextStyle: any;
   animatedSecondaryTextStyle: any;
   animatedSeparatorStyle: any;
 }
 
 export const PermissionsSettings = ({
-  masterToggle,
-  toggleMasterNotifications,
   colors,
   animatedTextStyle,
-  animatedActiveTextStyle,
   animatedSecondaryTextStyle,
   animatedSeparatorStyle,
 }: PermissionsSettingsProps) => {
@@ -126,36 +120,6 @@ export const PermissionsSettings = ({
         <Switch
           value={motionEnabled}
           onValueChange={handleMotionToggle}
-          trackColor={{
-            false: colors.inactive,
-            true: colors.active,
-          }}
-          thumbColor="#fff"
-          ios_backgroundColor={colors.inactive}
-        />
-      </View>
-
-      <Animated.View
-        className="my-2"
-        style={[{ height: 1 }, animatedSeparatorStyle]}
-      />
-
-      {/* Notifications Permission */}
-      <View className="flex-row items-center justify-between py-2">
-        <View className="flex-1">
-          <Animated.Text
-            className="text-base font-medium"
-            style={animatedTextStyle}
-          >
-            Notifications
-          </Animated.Text>
-          <Animated.Text className="text-sm" style={animatedSecondaryTextStyle}>
-            Prayer time reminders
-          </Animated.Text>
-        </View>
-        <Switch
-          value={masterToggle}
-          onValueChange={toggleMasterNotifications}
           trackColor={{
             false: colors.inactive,
             true: colors.active,
