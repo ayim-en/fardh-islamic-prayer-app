@@ -15,7 +15,7 @@ import { useQiblaDirection } from "@/hooks/useQiblaDirection";
 import { useIsFocused } from "@react-navigation/native";
 import { DeviceMotion } from "expo-sensors";
 import { StatusBar } from "expo-status-bar";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Text, Vibration, View } from "react-native";
 import Animated, {
   runOnJS,
@@ -95,9 +95,9 @@ export default function Qibla() {
     error: locationError,
     refreshLocation,
   } = useLocation();
-  const { qiblaData, loading, error: qiblaError } = useQiblaDirection(location);
+  const { qiblaData, loading, error: qiblaError, refreshQibla } = useQiblaDirection(location);
   const { currentPrayer } = usePrayerTimes(location);
-  const deviceHeading = useDeviceHeading();
+  const { heading: deviceHeading, restartHeading } = useDeviceHeading();
   const { colors, themePrayer, isDarkMode } = useThemeColors();
   const bgColor = isDarkMode
     ? darkModeColors.background
@@ -107,14 +107,37 @@ export default function Qibla() {
     null
   );
 
+  // Check and request motion permission
+  const checkMotionPermission = useCallback(async () => {
+    const { status } = await DeviceMotion.getPermissionsAsync();
+    if (status !== "granted") {
+      // Request permission if not granted
+      const { status: newStatus } = await DeviceMotion.requestPermissionsAsync();
+      setMotionPermission(newStatus === "granted");
+    } else {
+      setMotionPermission(true);
+    }
+  }, []);
+
   // Check motion permission on mount
   useEffect(() => {
-    const checkMotionPermission = async () => {
-      const { status } = await DeviceMotion.getPermissionsAsync();
-      setMotionPermission(status === "granted");
-    };
     checkMotionPermission();
-  }, []);
+  }, [checkMotionPermission]);
+
+  // Re-check motion permission when screen is focused
+  useEffect(() => {
+    if (isFocused) {
+      checkMotionPermission();
+    }
+  }, [isFocused, checkMotionPermission]);
+
+  // Comprehensive refresh function for the location button
+  const handleRefresh = useCallback(async () => {
+    await refreshLocation();
+    await refreshQibla();
+    await restartHeading();
+    await checkMotionPermission();
+  }, [refreshLocation, refreshQibla, restartHeading, checkMotionPermission]);
 
   // Animated text styles for guidance
   const animatedInactiveTextStyle = useAnimatedTextColor(colors.inactive);
@@ -212,7 +235,7 @@ export default function Qibla() {
         locationName={cityName}
         backgroundImage={backgroundImage}
         currentPrayer={currentPrayer}
-        onRefreshLocation={refreshLocation}
+        onRefreshLocation={handleRefresh}
       />
 
       {qiblaData && (

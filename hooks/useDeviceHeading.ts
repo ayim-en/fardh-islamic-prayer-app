@@ -1,5 +1,5 @@
 import * as Location from "expo-location";
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import {
   SharedValue,
   useSharedValue,
@@ -22,48 +22,66 @@ const normalizeAngleDiff = (current: number, target: number): number => {
   return current + diff;
 };
 
-export const useDeviceHeading = (): SharedValue<number> => {
+interface UseDeviceHeadingReturn {
+  heading: SharedValue<number>;
+  restartHeading: () => Promise<void>;
+}
+
+export const useDeviceHeading = (): UseDeviceHeadingReturn => {
   const heading = useSharedValue(0);
   const lastHeading = useSharedValue(0);
+  const subscriptionRef = useRef<Location.LocationSubscription | null>(null);
+
+  const startWatchingHeading = useCallback(async () => {
+    try {
+      // Remove existing subscription if any
+      if (subscriptionRef.current) {
+        subscriptionRef.current.remove();
+        subscriptionRef.current = null;
+      }
+
+      // Check current permission status without prompting
+      const { status } = await Location.getForegroundPermissionsAsync();
+      if (status !== "granted") {
+        console.warn("Location permission not granted for compass");
+        return;
+      }
+
+      subscriptionRef.current = await Location.watchHeadingAsync((headingData) => {
+        const compassHeading = headingData.trueHeading ?? headingData.magHeading;
+
+        // Normalize to handle 360/0 boundary smoothly
+        const normalizedHeading = normalizeAngleDiff(
+          lastHeading.value,
+          compassHeading
+        );
+        lastHeading.value = normalizedHeading;
+
+        // Animate to new heading with spring for smoothness
+        heading.value = withSpring(normalizedHeading, SPRING_CONFIG);
+      });
+    } catch (error) {
+      console.error("Error watching heading:", error);
+    }
+  }, [heading, lastHeading]);
 
   useEffect(() => {
-    let subscription: Location.LocationSubscription | null = null;
-
-    const startWatchingHeading = async () => {
-      try {
-        // Check current permission status without prompting
-        const { status } = await Location.getForegroundPermissionsAsync();
-        if (status !== "granted") {
-          console.warn("Location permission not granted for compass");
-          return;
-        }
-
-        subscription = await Location.watchHeadingAsync((headingData) => {
-          const compassHeading = headingData.trueHeading ?? headingData.magHeading;
-
-          // Normalize to handle 360/0 boundary smoothly
-          const normalizedHeading = normalizeAngleDiff(
-            lastHeading.value,
-            compassHeading
-          );
-          lastHeading.value = normalizedHeading;
-
-          // Animate to new heading with spring for smoothness
-          heading.value = withSpring(normalizedHeading, SPRING_CONFIG);
-        });
-      } catch (error) {
-        console.error("Error watching heading:", error);
-      }
-    };
-
     startWatchingHeading();
 
     return () => {
-      if (subscription) {
-        subscription.remove();
+      if (subscriptionRef.current) {
+        subscriptionRef.current.remove();
+        subscriptionRef.current = null;
       }
     };
-  }, [heading, lastHeading]);
+  }, [startWatchingHeading]);
 
-  return heading;
+  const restartHeading = useCallback(async () => {
+    // Reset heading values
+    lastHeading.value = 0;
+    heading.value = 0;
+    await startWatchingHeading();
+  }, [startWatchingHeading, heading, lastHeading]);
+
+  return { heading, restartHeading };
 };

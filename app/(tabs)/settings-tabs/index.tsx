@@ -558,6 +558,10 @@ export default function SettingsHome() {
           scrollEventThrottle={16}
         />
       </Animated.View>
+      <Animated.View
+        className="absolute bottom-0 left-0 right-0 rounded-t-3xl"
+        style={[{ height: 10 }, animatedBgStyle]}
+      />
     </View>
   );
 }
