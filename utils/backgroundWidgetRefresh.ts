@@ -4,6 +4,7 @@ import * as TaskManager from "expo-task-manager";
 import { Platform } from "react-native";
 import { DEFAULT_PRAYER_SETTINGS, tuneSettingsToString } from "@/constants/prayerSettings";
 import { getPrayerDict, PrayerTimesParams } from "@/prayer-api/prayerTimesAPI";
+import { getLocalISODate } from "./calendarHelpers";
 import { cleanTimeString, getCurrentPrayerFromDay } from "./prayerHelpers";
 import {
   DayPrayerTimes,
@@ -83,7 +84,7 @@ TaskManager.defineTask(BACKGROUND_TASK_NAME, async () => {
     for (let i = 0; i < 7; i++) {
       const date = new Date(now);
       date.setDate(date.getDate() + i);
-      const isoDate = date.toISOString().split("T")[0];
+      const isoDate = getLocalISODate(date);
       const dayData = prayerDict[isoDate];
       if (dayData?.timings) {
         days.push({

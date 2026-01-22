@@ -149,8 +149,73 @@ struct PrayerTimelineProvider: TimelineProvider {
             }
         }
 
-        // Use app's currentPrayer for NOW entry
-        entries.append(PrayerTimelineEntry(date: now, prayerData: prayerData))
+        // Calculate ACTUAL current prayer based on current time (don't trust stored value)
+        func calculateCurrentPrayer(at date: Date, for day: DayPrayerTimes, dayDate: Date) -> String {
+            // Get all prayer times as Dates for comparison
+            var prayerDates: [(name: String, date: Date)] = []
+            for prayerName in prayerNames {
+                let timeStr = getPrayerTime(prayerName, from: day)
+                if let prayerDate = parseTime(timeStr, on: dayDate) {
+                    prayerDates.append((name: prayerName, date: prayerDate))
+                }
+            }
+
+            // Find the most recent prayer that has started
+            var currentPrayer = "Isha" // Default to Isha (covers after Isha until Fajr)
+            for (name, prayerDate) in prayerDates {
+                if date >= prayerDate {
+                    currentPrayer = name
+                } else {
+                    break // Prayers are in order, so we can stop once we find a future one
+                }
+            }
+            return currentPrayer
+        }
+
+        // Get today's date for current prayer calculation
+        let todayStart = calendar.startOfDay(for: now)
+        let todayISOString = isoFormatter.string(from: todayStart)
+
+        // Find today's prayer data
+        var calculatedCurrentPrayer = prayerData.currentPrayer ?? "Fajr"
+        if let todayData = prayerData.days.first(where: { $0.date == todayISOString }) {
+            // Found today's data - calculate current prayer
+            calculatedCurrentPrayer = calculateCurrentPrayer(at: now, for: todayData, dayDate: todayStart)
+        } else {
+            // Today not found - find the closest matching day
+            // First, try to find a day that matches the current date (in case of timezone edge cases)
+            var bestMatch: (day: DayPrayerTimes, date: Date)? = nil
+            var smallestDiff: TimeInterval = .infinity
+
+            for day in prayerData.days {
+                if let dayDate = isoFormatter.date(from: day.date) {
+                    let diff = abs(todayStart.timeIntervalSince(dayDate))
+                    if diff < smallestDiff {
+                        smallestDiff = diff
+                        bestMatch = (day: day, date: dayDate)
+                    }
+                }
+            }
+
+            if let match = bestMatch {
+                // Use the closest day's data but calculate based on time of day only
+                // This handles timezone mismatches where dates are off by one day
+                calculatedCurrentPrayer = calculateCurrentPrayer(at: now, for: match.day, dayDate: todayStart)
+            }
+        }
+
+        // Create NOW entry with calculated current prayer
+        let nowPrayerData = PrayerData(
+            days: prayerData.days,
+            currentPrayer: calculatedCurrentPrayer,
+            locationName: prayerData.locationName,
+            lastUpdated: prayerData.lastUpdated,
+            accentColor: prayerData.accentColor,
+            isDarkMode: prayerData.isDarkMode,
+            themePrayer: prayerData.themePrayer,
+            timeFormat: prayerData.timeFormat
+        )
+        entries.append(PrayerTimelineEntry(date: now, prayerData: nowPrayerData))
 
         // Generate entries for all prayers across all 7 days
         for (dayIndex, day) in prayerData.days.enumerated() {
@@ -358,7 +423,9 @@ struct AllPrayersWidgetView: View {
     }
 
     var accentColor: Color {
-        if let hex = entry.prayerData.accentColor {
+        // If user has a theme override, use the stored color
+        // Otherwise, dynamically calculate based on current prayer
+        if entry.prayerData.themePrayer != nil, let hex = entry.prayerData.accentColor {
             return Color(hex: hex)
         }
         return PrayerThemeColors.accentColor(for: entry.prayerData.currentPrayer, isDark: effectiveIsDark)
@@ -426,7 +493,9 @@ struct UpcomingPrayerWidgetView: View {
     }
 
     var accentColor: Color {
-        if let hex = entry.prayerData.accentColor {
+        // If user has a theme override, use the stored color
+        // Otherwise, dynamically calculate based on current prayer
+        if entry.prayerData.themePrayer != nil, let hex = entry.prayerData.accentColor {
             return Color(hex: hex)
         }
         return PrayerThemeColors.accentColor(for: entry.prayerData.currentPrayer, isDark: effectiveIsDark)

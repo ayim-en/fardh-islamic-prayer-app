@@ -9,11 +9,9 @@ import { useThemeColors } from "@/context/ThemeContext";
 import { useAnimatedBackgroundColor } from "@/hooks/useAnimatedColor";
 import { useLocation } from "@/hooks/useLocation";
 import { usePrayerTimes } from "@/hooks/usePrayerTimes";
+import { getLocalISODate } from "@/utils/calendarHelpers";
 import { cleanTimeString } from "@/utils/prayerHelpers";
-import {
-  updateWidgetPrayerTimes,
-  DayPrayerTimes,
-} from "@/utils/widgetStorage";
+import { DayPrayerTimes, updateWidgetPrayerTimes } from "@/utils/widgetStorage";
 import { Tabs } from "expo-router";
 import React, { useEffect } from "react";
 import Animated from "react-native-reanimated";
@@ -70,9 +68,9 @@ export default function TabLayout() {
       // Extract 7 days of prayer times starting from today
       const days: DayPrayerTimes[] = [];
       for (let i = 0; i < 7; i++) {
-        const date = new Date(todayISO);
+        const date = new Date();
         date.setDate(date.getDate() + i);
-        const isoDate = date.toISOString().split("T")[0];
+        const isoDate = getLocalISODate(date);
         const dayData = prayerDict[isoDate];
         if (dayData?.timings) {
           days.push({
@@ -98,7 +96,16 @@ export default function TabLayout() {
         timeFormat: prayerSettings.timeFormat,
       });
     }
-  }, [prayerDict, todayISO, currentPrayer, locationName, colors, isDarkMode, themePrayer, prayerSettings.timeFormat]);
+  }, [
+    prayerDict,
+    todayISO,
+    currentPrayer,
+    locationName,
+    colors,
+    isDarkMode,
+    themePrayer,
+    prayerSettings.timeFormat,
+  ]);
 
   return (
     <Tabs
