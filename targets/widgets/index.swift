@@ -176,23 +176,26 @@ struct PrayerTimelineProvider: TimelineProvider {
         let todayStart = calendar.startOfDay(for: now)
         let todayISOString = isoFormatter.string(from: todayStart)
 
-        // Find today's prayer data
+        // Find today's prayer data and its index in the days array
         var calculatedCurrentPrayer = prayerData.currentPrayer ?? "Fajr"
-        if let todayData = prayerData.days.first(where: { $0.date == todayISOString }) {
+        var todayIndex: Int? = nil
+
+        if let index = prayerData.days.firstIndex(where: { $0.date == todayISOString }) {
             // Found today's data - calculate current prayer
-            calculatedCurrentPrayer = calculateCurrentPrayer(at: now, for: todayData, dayDate: todayStart)
+            todayIndex = index
+            calculatedCurrentPrayer = calculateCurrentPrayer(at: now, for: prayerData.days[index], dayDate: todayStart)
         } else {
             // Today not found - find the closest matching day
             // First, try to find a day that matches the current date (in case of timezone edge cases)
-            var bestMatch: (day: DayPrayerTimes, date: Date)? = nil
+            var bestMatch: (index: Int, day: DayPrayerTimes, date: Date)? = nil
             var smallestDiff: TimeInterval = .infinity
 
-            for day in prayerData.days {
+            for (index, day) in prayerData.days.enumerated() {
                 if let dayDate = isoFormatter.date(from: day.date) {
                     let diff = abs(todayStart.timeIntervalSince(dayDate))
                     if diff < smallestDiff {
                         smallestDiff = diff
-                        bestMatch = (day: day, date: dayDate)
+                        bestMatch = (index: index, day: day, date: dayDate)
                     }
                 }
             }
@@ -200,13 +203,20 @@ struct PrayerTimelineProvider: TimelineProvider {
             if let match = bestMatch {
                 // Use the closest day's data but calculate based on time of day only
                 // This handles timezone mismatches where dates are off by one day
+                todayIndex = match.index
                 calculatedCurrentPrayer = calculateCurrentPrayer(at: now, for: match.day, dayDate: todayStart)
             }
         }
 
-        // Create NOW entry with calculated current prayer
+        // Shift days array so today is first (fixes stale todayPrayers issue)
+        var nowDays = prayerData.days
+        if let idx = todayIndex, idx > 0 {
+            nowDays = Array(prayerData.days.dropFirst(idx)) + Array(prayerData.days.prefix(idx))
+        }
+
+        // Create NOW entry with calculated current prayer and shifted days
         let nowPrayerData = PrayerData(
-            days: prayerData.days,
+            days: nowDays,
             currentPrayer: calculatedCurrentPrayer,
             locationName: prayerData.locationName,
             lastUpdated: prayerData.lastUpdated,

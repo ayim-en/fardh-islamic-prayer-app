@@ -158,8 +158,9 @@ const scheduleReminderNotification = async (isoDate: string): Promise<void> => {
   if (!isoDate) return;
 
   try {
-    // Schedule for 12:00 PM on the reminder day
-    const reminderTime = new Date(`${isoDate}T12:00:00`);
+    // Schedule for 12:00 PM on the reminder day (use Date constructor for local time)
+    const [year, month, day] = isoDate.split("-").map(Number);
+    const reminderTime = new Date(year, month - 1, day, 12, 0, 0);
 
     // Don't schedule if the time has already passed
     if (reminderTime <= new Date()) return;
