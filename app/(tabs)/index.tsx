@@ -37,7 +37,7 @@ export default function Index() {
     todayIndex,
     currentPrayer,
   } = usePrayerTimes(location);
-  const { notificationsEnabled, toggleNotification, masterToggle } =
+  const { getNotificationState, cycleNotificationState } =
     useNotifications(prayerDict);
 
   const error = locationError || prayerError;
@@ -117,7 +117,11 @@ export default function Index() {
   return (
     <View className="flex-1" style={{ backgroundColor: bgColor }}>
       <StatusBar style="light" />
-      <PrayerHeader currentPrayer={currentPrayer} locationName={locationName} timeFormat={prayerSettings.timeFormat} />
+      <PrayerHeader
+        currentPrayer={currentPrayer}
+        locationName={locationName}
+        timeFormat={prayerSettings.timeFormat}
+      />
       <PrayerCarousel
         ref={carouselRef}
         prayerDict={prayerDict}
@@ -126,9 +130,8 @@ export default function Index() {
         todayIndex={todayIndex}
         currentPage={currentPage}
         onPageChange={setCurrentPage}
-        notificationsEnabled={notificationsEnabled}
-        onToggleNotification={toggleNotification}
-        notificationsMasterToggle={masterToggle}
+        getNotificationState={getNotificationState}
+        onCycleNotification={cycleNotificationState}
         activeColor={
           themePrayerDisplay
             ? prayerThemeColors[

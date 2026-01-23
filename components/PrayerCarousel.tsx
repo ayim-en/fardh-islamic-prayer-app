@@ -7,17 +7,39 @@ import {
 } from "@/constants/prayers";
 import { TimeFormat } from "@/constants/prayerSettings";
 import { useThemeColors } from "@/context/ThemeContext";
-import { useAnimatedBackgroundColor, useAnimatedTextColor } from "@/hooks/useAnimatedColor";
+import {
+  useAnimatedBackgroundColor,
+  useAnimatedTextColor,
+} from "@/hooks/useAnimatedColor";
+import { NotificationState } from "@/hooks/useNotifications";
 import { PrayerDict } from "@/prayer-api/prayerTimesAPI";
-import { formatDate, formatHijriDateShort, formatTimeWithPreference } from "@/utils/prayerHelpers";
+import {
+  formatDate,
+  formatHijriDateShort,
+  formatTimeWithPreference,
+} from "@/utils/prayerHelpers";
 import React, { forwardRef, useImperativeHandle, useRef } from "react";
 import { Dimensions, Pressable, Text, Vibration, View } from "react-native";
 import Animated from "react-native-reanimated";
 import { Carousel } from "react-native-ui-lib";
 import { AnimatedTintIcon } from "./AnimatedTintIcon";
 
+// Notification icons for each state
+const NOTIFICATION_ICONS = {
+  off: require("../assets/images/prayer-pro-icons/home-page/icon-notify-off.png"),
+  on: require("../assets/images/prayer-pro-icons/home-page/icon-notify-on.png"),
+  adhan: require("../assets/images/prayer-pro-icons/home-page/icon-notify-adhan.png"),
+};
+
+// Vibration patterns for each state transition
+const VIBRATION_PATTERNS = {
+  on: 50, // Short tap for notification on
+  adhan: [0, 80, 50, 80], // Double pulse for adhan
+  off: 30, // Quick tap for off
+};
+
 const { width, height } = Dimensions.get("window");
-const pageHeight = height * 0.50;
+const pageHeight = height * 0.5;
 const pageWidth = width * 0.85;
 const itemSpacing = 10;
 
@@ -28,9 +50,8 @@ interface PrayerCarouselProps {
   todayIndex: number;
   currentPage: number;
   onPageChange: (page: number) => void;
-  notificationsEnabled: Record<string, boolean>;
-  onToggleNotification: (prayer: string) => void;
-  notificationsMasterToggle: boolean;
+  getNotificationState: (prayer: string) => NotificationState;
+  onCycleNotification: (prayer: string) => Promise<NotificationState>;
   activeColor: string;
   inactiveColor: string;
   currentPrayer: string | null;
@@ -54,9 +75,8 @@ export const PrayerCarousel = forwardRef<
       todayIndex,
       currentPage,
       onPageChange,
-      notificationsEnabled,
-      onToggleNotification,
-      notificationsMasterToggle,
+      getNotificationState,
+      onCycleNotification,
       activeColor,
       inactiveColor,
       currentPrayer,
@@ -180,21 +200,29 @@ export const PrayerCarousel = forwardRef<
                         </View>
                         <View className="flex-row items-center gap-4">
                           <Animated.Text
-                            style={[{ fontSize: 18 }, animatedTertiaryTextStyle]}
+                            style={[
+                              { fontSize: 18 },
+                              animatedTertiaryTextStyle,
+                            ]}
                           >
-                            {formatTimeWithPreference(dayPrayers.timings[prayer], timeFormat)}
+                            {formatTimeWithPreference(
+                              dayPrayers.timings[prayer],
+                              timeFormat
+                            )}
                           </Animated.Text>
                           <Pressable
-                            onPress={() => {
-                              onToggleNotification(prayer);
-                              setTimeout(() => Vibration.vibrate(50), 100);
+                            onPress={async () => {
+                              const newState =
+                                await onCycleNotification(prayer);
+                              // Different vibration for each state
+                              setTimeout(() => {
+                                Vibration.vibrate(VIBRATION_PATTERNS[newState]);
+                              }, 100);
                             }}
                           >
                             <AnimatedTintIcon
                               source={
-                                notificationsMasterToggle && notificationsEnabled[prayer]
-                                  ? require("../assets/images/prayer-pro-icons/home-page/icon-notify-on.png")
-                                  : require("../assets/images/prayer-pro-icons/home-page/icon-notify-off.png")
+                                NOTIFICATION_ICONS[getNotificationState(prayer)]
                               }
                               size={24}
                               tintColor={
