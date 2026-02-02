@@ -16,19 +16,18 @@
         "ITSAppUsesNonExemptEncryption": false,
         "NSLocationWhenInUseUsageDescription": "This app needs access to your location to show accurate prayer times for your area.",
         "NSMotionUsageDescription": "This app uses motion sensors to provide an accurate Qibla compass direction.",
-        "BGTaskSchedulerPermittedIdentifiers": ["com.expo.modules.backgroundtask.processing"],
+        "BGTaskSchedulerPermittedIdentifiers": [
+          "com.expo.modules.backgroundtask.processing"
+        ],
         "UIBackgroundModes": ["processing"]
       },
       "entitlements": {
-        "com.apple.security.application-groups": [
-          "group.com.ayimen.fardh"
-        ]
+        "com.apple.security.application-groups": ["group.com.ayimen.fardh"]
       }
     },
     "notification": {
       "icon": "./assets/images/fardh-icon.png",
-      "color": "#568FAF",
-      "sounds": ["./assets/audio/adhan_mishary_rashid_alafasy.caf"]
+      "color": "#568FAF"
     },
     "android": {
       "adaptiveIcon": {
@@ -65,6 +64,14 @@
             "image": "./assets/images/fardh-dark.png",
             "backgroundColor": "#1a1a2e"
           }
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/fardh-icon.png",
+          "color": "#568FAF",
+          "sounds": ["./assets/audio/adhan.caf"]
         }
       ],
       [
