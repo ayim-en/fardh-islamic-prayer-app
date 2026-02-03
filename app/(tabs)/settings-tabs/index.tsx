@@ -53,8 +53,15 @@ type SettingsSection = {
 type PickerType = "method" | "school" | "latitude" | "tune" | "calendarMethod";
 
 export default function SettingsHome() {
-  const { colors, isDarkMode, currentPrayer, themePrayer, setThemePrayer, appIcon, setAppIcon } =
-    useThemeColors();
+  const {
+    colors,
+    isDarkMode,
+    currentPrayer,
+    themePrayer,
+    setThemePrayer,
+    appIcon,
+    setAppIcon,
+  } = useThemeColors();
   const { settings, updateSettings, updateAllTune } = usePrayerSettings();
   const { settings: calendarSettings, updateSettings: updateCalendarSettings } =
     useCalendarSettings();
@@ -68,10 +75,10 @@ export default function SettingsHome() {
   } = useNotificationSettings();
   const { resetWalkthrough } = useWalkthrough();
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
   const [expandedPickers, setExpandedPickers] = useState<Set<PickerType>>(
-    new Set()
+    new Set(),
   );
 
   const togglePicker = useCallback((picker: PickerType) => {
@@ -108,7 +115,7 @@ export default function SettingsHome() {
   const animatedSecondaryTextStyle = useAnimatedTextColor(secondaryTextColor);
   const animatedActiveTextStyle = useAnimatedTextColor(colors.active);
   const animatedSelectedBgStyle = useAnimatedBackgroundColor(
-    colors.active + "20"
+    colors.active + "20",
   );
   const animatedSeparatorStyle = useAnimatedBackgroundColor(separatorColor);
 
@@ -307,7 +314,7 @@ export default function SettingsHome() {
                   <Pressable
                     onPress={() =>
                       Linking.openURL(
-                        "https://www.linkedin.com/in/abdulnasserhussien/"
+                        "https://www.linkedin.com/in/abdulnasserhussien/",
                       )
                     }
                   >
@@ -344,7 +351,7 @@ export default function SettingsHome() {
                   style={animatedActiveTextStyle}
                   onPress={() =>
                     Linking.openURL(
-                      "https://github.com/ayim-en/fardh-islamic-prayer-app"
+                      "https://github.com/ayim-en/fardh-islamic-prayer-app",
                     )
                   }
                 >
@@ -352,15 +359,6 @@ export default function SettingsHome() {
                 </Animated.Text>
                 !
               </Animated.Text>
-              <Pressable
-                onPress={resetWalkthrough}
-                className="mt-2 py-3 px-4 rounded-xl items-center"
-                style={{ backgroundColor: colors.active }}
-              >
-                <Animated.Text className="text-white text-base font-semibold">
-                  Replay Walkthrough
-                </Animated.Text>
-              </Pressable>
             </View>
           ),
         },
@@ -520,7 +518,7 @@ export default function SettingsHome() {
           style={[{ height: 1 }, animatedSeparatorStyle]}
         />
       ) : null,
-    [animatedSeparatorStyle]
+    [animatedSeparatorStyle],
   );
 
   return (

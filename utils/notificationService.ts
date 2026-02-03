@@ -7,7 +7,7 @@ import { Platform } from "react-native";
 
 // Unique descriptions for each prayer
 const PRAYER_DESCRIPTIONS: Record<string, string> = {
-  Fajr: "The two rak'ahs of Fajr are better than the world and all it contains.",
+  Fajr: "Victory begins with Fajr, come to success",
   Sunrise: "The sun has risen, may your day be filled with barakah.",
   Dhuhr: "Take a break for the one who gave you this day",
   Asr: "Don't let work cost you your prayer, guard your Asr",
