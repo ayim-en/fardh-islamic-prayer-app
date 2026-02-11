@@ -100,8 +100,7 @@
         }
       ],
       "@bacons/apple-targets",
-      "expo-background-task",
-      "./plugins/withWidgetCompilerFix.js"
+      "expo-background-task"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -18,4 +18,9 @@ module.exports = {
       dark: "#1a1a2e",
     },
   },
+  // Ensure proper build settings for Expo SDK 54
+  buildSettings: {
+    SWIFT_VERSION: "5.0",
+    IPHONEOS_DEPLOYMENT_TARGET: "17.0",
+  },
 };

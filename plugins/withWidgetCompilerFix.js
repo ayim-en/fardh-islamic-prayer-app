@@ -3,8 +3,7 @@ const { withXcodeProject } = require('@expo/config-plugins');
 const withWidgetCompilerFix = (config) => {
   return withXcodeProject(config, (config) => {
     const xcodeProject = config.modResults;
-    // This must match the "targetName" defined in your app.json
-    const WIDGET_TARGET_NAME = "PrayerWidgets"; 
+    const WIDGET_TARGET_NAME = "PrayerWidgets"; // Must match your target name
 
     const target = xcodeProject.pbxTargetByName(WIDGET_TARGET_NAME);
     
@@ -22,18 +21,16 @@ const withWidgetCompilerFix = (config) => {
 
     const configList = xcodeProject.pbxXCConfigurationList()[buildConfigList];
     
-    // Iterate through all build configurations (Debug, Release) for the Widget target
     configList.buildConfigurations.forEach((configRef) => {
       const buildConfig = configurations[configRef.value];
       if (buildConfig) {
-        console.log(`[withWidgetCompilerFix] Cleaning compiler settings for ${WIDGET_TARGET_NAME} (${buildConfig.name})`);
+        console.log(`[withWidgetCompilerFix] Overwriting compiler settings for ${WIDGET_TARGET_NAME} (${buildConfig.name})`);
         
-        // Remove React Native compiler overrides specifically for the widget
-        // This forces Xcode to use the default Apple compiler (clang)
-        delete buildConfig.buildSettings['CC'];
-        delete buildConfig.buildSettings['CXX'];
-        delete buildConfig.buildSettings['LD'];
-        delete buildConfig.buildSettings['LDPLUSPLUS'];
+        // Set to empty string to block inheritance
+        buildConfig.buildSettings['CC'] = "";
+        buildConfig.buildSettings['CXX'] = "";
+        buildConfig.buildSettings['LD'] = "";
+        buildConfig.buildSettings['LDPLUSPLUS'] = "";
       }
     });
 
