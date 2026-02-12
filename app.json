@@ -121,6 +121,11 @@
                       "group.com.ayimen.fardh"
                     ]
                   }
+                },
+                {
+                  "bundleIdentifier": "com.ayimen.fardh.notification-service",
+                  "targetName": "NotificationService",
+                  "entitlements": {}
                 }
               ]
             }
