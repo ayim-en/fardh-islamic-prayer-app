@@ -5,6 +5,7 @@ import {
   scheduleAllPrayerNotifications,
 } from "@/utils/notificationService";
 import { useCallback, useEffect } from "react";
+import { Alert } from "react-native";
 
 // Notification states for cycling: off → on → adhan → off
 export type NotificationState = "off" | "on" | "adhan";
@@ -45,6 +46,16 @@ export const useNotifications = (prayerDict: PrayerDict = {}) => {
       const currentState = getNotificationState(prayer);
 
       if (currentState === "off") {
+        // If master toggle is off, prompt user to enable it in settings
+        if (!masterToggle) {
+          Alert.alert(
+            "Notifications Disabled",
+            "Enable notifications in Settings to receive prayer time reminders.",
+            [{ text: "OK" }]
+          );
+          return "off";
+        }
+
         // off → on: Enable notification
         await toggleNotification(prayer);
         return "on";
@@ -72,6 +83,7 @@ export const useNotifications = (prayerDict: PrayerDict = {}) => {
       toggleAdhan,
       toggleAdhanMaster,
       adhanMasterToggle,
+      masterToggle,
     ]
   );
 
