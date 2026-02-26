@@ -19,16 +19,85 @@ import {
   useAnimatedBackgroundColor,
   useAnimatedTextColor,
 } from "@/hooks/useAnimatedColor";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
+  Alert,
   Linking,
   Platform,
   Pressable,
   SectionList,
+  TouchableOpacity,
   UIManager,
   View,
 } from "react-native";
+import {
+  getScheduledNotifications,
+  sendTestNotification,
+} from "@/utils/notificationService";
 import Animated from "react-native-reanimated";
+
+const DebugSettings = ({ resetWalkthrough }: { resetWalkthrough: () => void }) => {
+  const { colors, isDarkMode } = useThemeColors();
+  const [scheduledCount, setScheduledCount] = useState<number | null>(null);
+
+  const textColor = isDarkMode ? darkModeColors.textSecondary : lightModeColors.textSecondary;
+
+  const rows: { label: string; onPress: () => void }[] = [
+    {
+      label: "Send Test Notification",
+      onPress: async () => {
+        await sendTestNotification();
+        Alert.alert("Debug", "Test notification fires in 5 seconds.");
+      },
+    },
+    {
+      label: "Check Scheduled Notifications",
+      onPress: async () => {
+        const notifications = await getScheduledNotifications();
+        setScheduledCount(notifications.length);
+        Alert.alert("Debug", `${notifications.length} notification(s) scheduled.`);
+      },
+    },
+    {
+      label: "Reset Walkthrough",
+      onPress: () => {
+        resetWalkthrough();
+        Alert.alert("Debug", "Walkthrough reset. Restart the app to see it.");
+      },
+    },
+  ];
+
+  return (
+    <View className="gap-1">
+      {rows.map((row, i) => (
+        <TouchableOpacity
+          key={row.label}
+          onPress={row.onPress}
+          className="py-3 px-1 flex-row justify-between items-center"
+          style={
+            i < rows.length - 1
+              ? {
+                  borderBottomWidth: 1,
+                  borderBottomColor: isDarkMode
+                    ? "rgba(255,255,255,0.08)"
+                    : "rgba(0,0,0,0.06)",
+                }
+              : undefined
+          }
+        >
+          <Animated.Text className="text-base" style={{ color: colors.active }}>
+            {row.label}
+          </Animated.Text>
+          {row.label === "Check Scheduled Notifications" && scheduledCount !== null && (
+            <Animated.Text className="text-sm" style={{ color: textColor }}>
+              {scheduledCount} scheduled
+            </Animated.Text>
+          )}
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+};
 
 // Enable LayoutAnimation on Android
 if (
@@ -74,6 +143,23 @@ export default function SettingsHome() {
     toggleAdhan,
   } = useNotificationSettings();
   const { resetWalkthrough } = useWalkthrough();
+  const [debugUnlocked, setDebugUnlocked] = useState(false);
+  const debugTapCount = useRef(0);
+  const debugTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleAboutIconTap = useCallback(() => {
+    debugTapCount.current += 1;
+    if (debugTapTimer.current) clearTimeout(debugTapTimer.current);
+    if (debugTapCount.current >= 5) {
+      debugTapCount.current = 0;
+      setDebugUnlocked((prev) => !prev);
+    } else {
+      debugTapTimer.current = setTimeout(() => {
+        debugTapCount.current = 0;
+      }, 2000);
+    }
+  }, []);
+
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(),
   );
@@ -364,6 +450,21 @@ export default function SettingsHome() {
         },
       ],
     },
+    ...(debugUnlocked
+      ? [
+          {
+            id: "debug",
+            title: "Debug",
+            icon: require("../../../assets/images/prayer-pro-icons/settings-tab/settings-about.png"),
+            data: [
+              {
+                id: "debug-content",
+                content: <DebugSettings resetWalkthrough={resetWalkthrough} />,
+              },
+            ],
+          },
+        ]
+      : []),
     {
       id: "privacy-policy",
       title: "Privacy Policy",
@@ -452,6 +553,20 @@ export default function SettingsHome() {
 
   const renderSectionHeader = ({ section }: { section: SettingsSection }) => {
     const isExpanded = expandedSections.has(section.id);
+    const isAbout = section.id === "about";
+
+    const iconBadge = (
+      <Animated.View
+        className="w-10 h-10 rounded-lg items-center justify-center mr-3"
+        style={animatedSelectedBgStyle}
+      >
+        <AnimatedTintIcon
+          source={section.icon}
+          size={22}
+          tintColor={colors.active}
+        />
+      </Animated.View>
+    );
 
     return (
       <Pressable
@@ -463,16 +578,13 @@ export default function SettingsHome() {
             className="flex-row items-center p-4"
             style={{ opacity: pressed ? 0.7 : 1 }}
           >
-            <Animated.View
-              className="w-10 h-10 rounded-lg items-center justify-center mr-3"
-              style={animatedSelectedBgStyle}
-            >
-              <AnimatedTintIcon
-                source={section.icon}
-                size={22}
-                tintColor={colors.active}
-              />
-            </Animated.View>
+            {isAbout ? (
+              <Pressable onPress={handleAboutIconTap} hitSlop={8}>
+                {iconBadge}
+              </Pressable>
+            ) : (
+              iconBadge
+            )}
             <Animated.Text
               className="flex-1 text-2xl font-medium"
               style={animatedTextStyle}
