@@ -1,5 +1,6 @@
-import React from "react";
-import { Switch, View } from "react-native";
+import { AnimatedTintIcon } from "@/components/AnimatedTintIcon";
+import React, { useState } from "react";
+import { Pressable, Switch, View } from "react-native";
 import Animated from "react-native-reanimated";
 
 // Prayers that support adhan (excludes Sunrise - no adhan for Sunrise in Islam)
@@ -30,6 +31,8 @@ export const NotificationSettings = ({
   animatedSecondaryTextStyle,
   animatedSeparatorStyle,
 }: NotificationSettingsProps) => {
+  const [adhanExpanded, setAdhanExpanded] = useState(false);
+
   return (
     <View className="gap-2">
       {/* Master Toggle */}
@@ -64,8 +67,11 @@ export const NotificationSettings = ({
             style={[{ height: 1 }, animatedSeparatorStyle]}
           />
 
-          {/* Adhan Master Toggle */}
-          <View className="flex-row items-center justify-between py-2">
+          {/* Adhan Dropdown Header */}
+          <Pressable
+            onPress={() => setAdhanExpanded((prev) => !prev)}
+            className="flex-row items-center justify-between py-2"
+          >
             <View className="flex-1">
               <Animated.Text
                 className="text-base font-medium"
@@ -80,57 +86,78 @@ export const NotificationSettings = ({
                 Due to iOS limits, Adhan is limited to 30 seconds
               </Animated.Text>
             </View>
-            <Switch
-              value={adhanMasterToggle}
-              onValueChange={toggleAdhanMaster}
-              trackColor={{
-                false: colors.inactive,
-                true: colors.active,
-              }}
-              thumbColor="#fff"
-              ios_backgroundColor={colors.inactive}
-            />
-          </View>
+            <Animated.View
+              style={{ transform: [{ rotate: adhanExpanded ? "180deg" : "0deg" }] }}
+            >
+              <AnimatedTintIcon
+                source={require("../assets/images/prayer-pro-icons/settings-tab/settings-dropdown.png")}
+                size={18}
+                tintColor={colors.active}
+              />
+            </Animated.View>
+          </Pressable>
 
-          {/* Per-Prayer Adhan Toggles */}
-          {adhanMasterToggle && (
+          {adhanExpanded && (
             <>
               <Animated.View
                 className="my-2"
                 style={[{ height: 1 }, animatedSeparatorStyle]}
               />
-              {ADHAN_PRAYERS.map((prayer, index) => {
-                const isAdhanEnabled = adhanEnabled[prayer] ?? false;
 
-                return (
-                  <View key={prayer}>
-                    <View className="flex-row items-center justify-between py-2">
-                      <Animated.Text
-                        className="flex-1 text-base"
-                        style={animatedTextStyle}
-                      >
-                        {prayer}
-                      </Animated.Text>
-                      <Switch
-                        value={isAdhanEnabled}
-                        onValueChange={() => toggleAdhan(prayer)}
-                        trackColor={{
-                          false: colors.inactive,
-                          true: colors.active,
-                        }}
-                        thumbColor="#fff"
-                        ios_backgroundColor={colors.inactive}
-                      />
-                    </View>
-                    {index < ADHAN_PRAYERS.length - 1 && (
-                      <Animated.View
-                        className="my-1"
-                        style={[{ height: 1 }, animatedSeparatorStyle]}
-                      />
-                    )}
-                  </View>
-                );
-              })}
+              {/* Allow Adhan (master) */}
+              <View className="flex-row items-center justify-between py-2">
+                <Animated.Text
+                  className="flex-1 text-base"
+                  style={animatedTextStyle}
+                >
+                  Allow Adhan
+                </Animated.Text>
+                <Switch
+                  value={adhanMasterToggle}
+                  onValueChange={toggleAdhanMaster}
+                  trackColor={{ false: colors.inactive, true: colors.active }}
+                  thumbColor="#fff"
+                  ios_backgroundColor={colors.inactive}
+                />
+              </View>
+
+              {/* Per-Prayer Adhan Toggles */}
+              {adhanMasterToggle && (
+                <>
+                  <Animated.View
+                    className="my-2"
+                    style={[{ height: 1 }, animatedSeparatorStyle]}
+                  />
+                  {ADHAN_PRAYERS.map((prayer, index) => {
+                    const isAdhanEnabled = adhanEnabled[prayer] ?? false;
+                    return (
+                      <View key={prayer}>
+                        <View className="flex-row items-center justify-between py-2">
+                          <Animated.Text
+                            className="flex-1 text-base"
+                            style={animatedTextStyle}
+                          >
+                            {prayer}
+                          </Animated.Text>
+                          <Switch
+                            value={isAdhanEnabled}
+                            onValueChange={() => toggleAdhan(prayer)}
+                            trackColor={{ false: colors.inactive, true: colors.active }}
+                            thumbColor="#fff"
+                            ios_backgroundColor={colors.inactive}
+                          />
+                        </View>
+                        {index < ADHAN_PRAYERS.length - 1 && (
+                          <Animated.View
+                            className="my-1"
+                            style={[{ height: 1 }, animatedSeparatorStyle]}
+                          />
+                        )}
+                      </View>
+                    );
+                  })}
+                </>
+              )}
             </>
           )}
         </>
