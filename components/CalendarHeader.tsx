@@ -1,4 +1,5 @@
 import { NextHijriHolidayData } from "@/prayer-api/islamicCalendarAPI";
+import { convertDDMMYYYYToISO, getTodayISO } from "@/utils/calendarHelpers";
 import React from "react";
 import { Text, View } from "react-native";
 import { AnimatedCrossfadeImage } from "./AnimatedCrossfadeImage";
@@ -19,6 +20,10 @@ export const CalendarHeader = ({
   const holidayName =
     nextHoliday?.hijri?.holidays?.[0] || nextHoliday?.gregorian?.holidays?.[0];
   const hasHoliday = holidayName !== undefined;
+  const isToday =
+    hasHoliday &&
+    nextHoliday?.gregorian?.date != null &&
+    convertDDMMYYYYToISO(nextHoliday.gregorian.date) === getTodayISO();
 
   return (
     <>
@@ -35,7 +40,7 @@ export const CalendarHeader = ({
         >
           {nextHoliday
             ? hasHoliday
-              ? "Upcoming Holiday:"
+              ? isToday ? "Current Holiday:" : "Upcoming Holiday:"
               : "No Upcoming Holiday"
             : "Loading upcoming holiday..."}
         </Text>
