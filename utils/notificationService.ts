@@ -132,6 +132,8 @@ export const scheduleAllPrayerNotifications = async (
   // Schedule for 10 days (6 prayers × 10 days = 60 notifications, under iOS 64 limit)
   const datesToSchedule = sortedDates.slice(0, 10);
 
+  let expectedCount = 0;
+
   for (const isoDate of datesToSchedule) {
     const dayPrayers = prayerDict[isoDate];
     if (!dayPrayers) continue;
@@ -145,17 +147,51 @@ export const scheduleAllPrayerNotifications = async (
 
       const prayerTime = parsePrayerTime(isoDate, timeString);
       const useAdhan = adhanEnabled[prayer] ?? false;
-      await schedulePrayerNotification(prayer, prayerTime, isoDate, timeString, useAdhan);
+      const id = await schedulePrayerNotification(prayer, prayerTime, isoDate, timeString, useAdhan);
+      if (id) expectedCount++;
     }
   }
 
   // Schedule a reminder notification on day 9 to prompt user to open the app
-  await scheduleReminderNotification(sortedDates[8]);
+  const reminderId = await scheduleReminderNotification(sortedDates[8]);
+  if (reminderId) expectedCount++;
+
+  // Verify scheduled notifications match expected count
+  await verifyScheduledNotifications(expectedCount);
+};
+
+// Verify that the expected number of notifications were actually scheduled
+const verifyScheduledNotifications = async (
+  expectedCount: number,
+  retryCount: number = 0
+): Promise<void> => {
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+  const actualCount = scheduled.length;
+
+  if (actualCount < expectedCount) {
+    console.warn(
+      `[Notifications] Verification failed: expected ${expectedCount}, got ${actualCount} (attempt ${retryCount + 1})`
+    );
+
+    // Retry once — scheduling can be delayed on iOS
+    if (retryCount === 0) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await verifyScheduledNotifications(expectedCount, retryCount + 1);
+    } else {
+      console.error(
+        `[Notifications] ${expectedCount - actualCount} notifications failed to schedule after retry`
+      );
+    }
+  } else {
+    console.log(
+      `[Notifications] Verification passed: ${actualCount} notifications scheduled`
+    );
+  }
 };
 
 // Schedule a reminder notification to open the app
-const scheduleReminderNotification = async (isoDate: string): Promise<void> => {
-  if (!isoDate) return;
+const scheduleReminderNotification = async (isoDate: string): Promise<string | null> => {
+  if (!isoDate) return null;
 
   try {
     // Schedule for 12:00 PM on the reminder day (use Date constructor for local time)
@@ -163,9 +199,9 @@ const scheduleReminderNotification = async (isoDate: string): Promise<void> => {
     const reminderTime = new Date(year, month - 1, day, 12, 0, 0);
 
     // Don't schedule if the time has already passed
-    if (reminderTime <= new Date()) return;
+    if (reminderTime <= new Date()) return null;
 
-    await Notifications.scheduleNotificationAsync({
+    const identifier = await Notifications.scheduleNotificationAsync({
       content: {
         title: "Open Fardh: Islamic Prayer App",
         body: "Open the app to continue receiving prayer notifications",
@@ -178,8 +214,11 @@ const scheduleReminderNotification = async (isoDate: string): Promise<void> => {
         channelId: Platform.OS === "android" ? "prayer-notifications" : undefined,
       },
     });
+
+    return identifier;
   } catch (error) {
     console.error("Failed to schedule reminder notification:", error);
+    return null;
   }
 };
 

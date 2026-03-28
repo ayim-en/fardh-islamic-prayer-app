@@ -5,6 +5,7 @@ import { NotificationSettingsProvider } from "@/context/NotificationSettingsCont
 import { PrayerSettingsProvider } from "@/context/PrayerSettingsContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { WalkthroughProvider, useWalkthrough } from "@/context/WalkthroughContext";
+import { registerNotificationCheckTask } from "@/utils/backgroundNotificationCheck";
 import { registerBackgroundTask } from "@/utils/backgroundWidgetRefresh";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -52,9 +53,10 @@ function RootLayoutContent() {
   const [minTimePassed, setMinTimePassed] = useState(false);
   const { showWalkthrough, completeWalkthrough } = useWalkthrough();
 
-  // Register background task for widget refresh
+  // Register background tasks for widget refresh and notification verification
   useEffect(() => {
     registerBackgroundTask();
+    registerNotificationCheckTask();
   }, []);
 
   useEffect(() => {
