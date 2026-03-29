@@ -1,4 +1,4 @@
-# [Fardh: Islamic Prayer App]
+# Fardh: Islamic Prayer App
 
 Cross-platform mobile app with real-time prayer time calculations supporting 24 calculation methods and dual juristic schools, currently undergoing final testing through Test Flight
 
