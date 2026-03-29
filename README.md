@@ -1,50 +1,27 @@
-# Welcome to your Expo app 👋
+# [Fardh: Islamic Prayer App]
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Cross-platform mobile app with real-time prayer time calculations supporting 24 calculation methods and dual juristic schools, currently undergoing final testing through Test Flight
 
-## Get started
+## ✨ Features
 
-1. Install dependencies
+* **Prayer Times & Islamic Calendar:** Fetches real-time data via the [Aladhan Prayer Times API](https://aladhan.com/prayer-times-api) and [Aladhan Islamic Calendar API](https://aladhan.com/islamic-calendar-api) to keep users updated with accurate prayer schedules and lunar dates.
+* **Qibla:** Utilizes Expo's [Location API](https://docs.expo.dev/versions/latest/sdk/location/#api) alongside the [Aladhan Qibla API](https://aladhan.com/qibla-api) to provide precise Qibla direction.
+* **Prayer Notifications:** Local push notifications using Expo's [Notifications API](https://docs.expo.dev/versions/latest/sdk/notifications/#api) to alert users of upcoming prayer times.
+* **Home Screen Widgets:** Built with [Expo Apple Targets](https://github.com/EvanBacon/expo-apple-targets) and Apple's [WidgetKit Timeline](https://developer.apple.com/documentation/widgetkit/keeping-a-widget-up-to-date) to provide at-a-glance prayer information directly on the iOS home screen.
 
-   ```bash
-   npm install
-   ```
+## 🛠️ Libraries and Frameworks Used
 
-2. Start the app
+* **[React Native](https://reactnative.dev/docs/components-and-apis):** Core framework for cross-platform mobile development.
+* **[Expo](https://docs.expo.dev/guides/overview/):** Toolchain and framework for accelerated React Native development.
 
-   ```bash
-   npx expo start
-   ```
+* **[Bottom Tabs](https://reactnavigation.org/docs/bottom-tab-navigator):** For a simple and intuitive navigation experience.
+* **[AsyncStorage](https://react-native-async-storage.github.io/3.0-next/api/usage/):** For caching essential user data and preferences locally.
 
-In the output, you'll find options to open the app in a
+* **[NativeWind](https://www.nativewind.dev/docs) & [CSS](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties):** For utility-first styling and robust layout management.
+* **[ReAnimated](https://docs.swmansion.com/react-native-reanimated/docs/category/fundamentals):** High-performance, fluid animations and transitions.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+* **[React Native Reusables](https://reactnativereusables.com/docs):** Unstyled, accessible, and customizable components.
+* **[RNUI (React Native UI Lib)](https://wix.github.io/react-native-ui-lib/docs/category/basic):** Comprehensive UI toolset and component library.
+* **[RNC (React Native Calendars)](https://wix.github.io/react-native-calendars/docs/Components/Calendar):** Robust calendar components for React Native.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+* **Design Assets:** UI/UX designed in **Figma**, featuring free line icons from **[IconScout](https://iconscout.com/unicons/free-line-icons)**.
