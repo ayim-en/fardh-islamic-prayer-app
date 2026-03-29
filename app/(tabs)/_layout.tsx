@@ -109,8 +109,8 @@ export default function TabLayout() {
 
   return (
     <Tabs
-      sceneContainerStyle={{ backgroundColor: bgColor }}
       screenOptions={{
+        sceneStyle: { backgroundColor: bgColor },
         lazy: false,
         headerShown: false,
         tabBarShowLabel: false,

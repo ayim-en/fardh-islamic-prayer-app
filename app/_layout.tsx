@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/context/ThemeContext";
 import { WalkthroughProvider, useWalkthrough } from "@/context/WalkthroughContext";
 import { registerNotificationCheckTask } from "@/utils/backgroundNotificationCheck";
 import { registerBackgroundTask } from "@/utils/backgroundWidgetRefresh";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useCallback, useEffect, useState } from "react";
@@ -46,12 +47,37 @@ Spacings.loadSpacings({
   card: 8,
 });
 
+// Dark mode prayers — must match ThemeContext's DARK_MODE_PRAYERS
+const DARK_MODE_PRAYERS = ["Maghrib", "Isha"];
+
 function RootLayoutContent() {
   const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
+  const systemIsDark = colorScheme === "dark";
   const [appReady, setAppReady] = useState(false);
   const [minTimePassed, setMinTimePassed] = useState(false);
+  const [themeReady, setThemeReady] = useState(false);
+  const [initialIsDark, setInitialIsDark] = useState(systemIsDark);
   const { showWalkthrough, completeWalkthrough } = useWalkthrough();
+
+  // Load persisted prayer/theme to determine correct initial background
+  useEffect(() => {
+    (async () => {
+      try {
+        const [savedThemePrayer, savedCurrentPrayer] = await Promise.all([
+          AsyncStorage.getItem("themePrayer"),
+          AsyncStorage.getItem("lastCurrentPrayer"),
+        ]);
+        const activePrayer = savedThemePrayer || savedCurrentPrayer;
+        if (activePrayer) {
+          setInitialIsDark(DARK_MODE_PRAYERS.includes(activePrayer));
+        }
+      } catch (error) {
+        console.error("Error loading initial theme:", error);
+      } finally {
+        setThemeReady(true);
+      }
+    })();
+  }, []);
 
   // Register background tasks for widget refresh and notification verification
   useEffect(() => {
@@ -67,16 +93,16 @@ function RootLayoutContent() {
   }, []);
 
   useEffect(() => {
-    if (appReady && minTimePassed && showWalkthrough !== null) {
+    if (appReady && minTimePassed && themeReady && showWalkthrough !== null) {
       SplashScreen.hideAsync();
     }
-  }, [appReady, minTimePassed, showWalkthrough]);
+  }, [appReady, minTimePassed, themeReady, showWalkthrough]);
 
   const onLayoutReady = useCallback(() => {
     setAppReady(true);
   }, []);
 
-  const bgColor = isDark
+  const bgColor = initialIsDark
     ? darkModeColors.background
     : lightModeColors.background;
 

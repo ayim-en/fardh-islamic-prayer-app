@@ -1,12 +1,12 @@
-import { Image, ImageSource } from "expo-image";
+import { Image, ImageContentFit, ImageSource, ImageStyle } from "expo-image";
 import React from "react";
-import { StyleSheet, ViewStyle } from "react-native";
+import { StyleSheet } from "react-native";
 
 interface AnimatedCrossfadeImageProps {
   source: ImageSource | null;
   duration?: number;
-  style?: ViewStyle;
-  resizeMode?: "cover" | "contain" | "stretch";
+  style?: ImageStyle;
+  resizeMode?: ImageContentFit;
 }
 
 /**

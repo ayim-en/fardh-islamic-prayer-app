@@ -5,6 +5,7 @@ import { useColorScheme } from "react-native";
 
 const THEME_STORAGE_KEY = "themePrayer";
 const APP_ICON_STORAGE_KEY = "appIcon";
+const CURRENT_PRAYER_STORAGE_KEY = "lastCurrentPrayer";
 
 export type AppIconType = "default" | "light" | "dark";
 
@@ -26,6 +27,8 @@ interface ThemeContextType {
   // App icon preference
   appIcon: AppIconType;
   setAppIcon: (icon: AppIconType) => void;
+  // Whether persisted theme settings have been loaded
+  themeLoaded: boolean;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -54,19 +57,23 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
   // App icon preference
   const [appIcon, setAppIcon] = useState<AppIconType>("default");
 
-  // Load saved theme and app icon from AsyncStorage on mount
+  // Load saved theme, app icon, and last current prayer from AsyncStorage on mount
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const [savedTheme, savedIcon] = await Promise.all([
+        const [savedTheme, savedIcon, savedPrayer] = await Promise.all([
           AsyncStorage.getItem(THEME_STORAGE_KEY),
           AsyncStorage.getItem(APP_ICON_STORAGE_KEY),
+          AsyncStorage.getItem(CURRENT_PRAYER_STORAGE_KEY),
         ]);
         if (savedTheme) {
           setThemePrayer(savedTheme as Prayer);
         }
         if (savedIcon) {
           setAppIcon(savedIcon as AppIconType);
+        }
+        if (savedPrayer) {
+          setCurrentPrayer(savedPrayer as Prayer);
         }
       } catch (error) {
         console.error("Error loading settings:", error);
@@ -114,6 +121,16 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     ? DARK_MODE_PRAYERS.includes(activePrayer)
     : systemIsDark;
 
+  // Persist currentPrayer to AsyncStorage when it changes
+  const persistedSetCurrentPrayer = useCallback((prayer: Prayer | null) => {
+    setCurrentPrayer(prayer);
+    if (prayer) {
+      AsyncStorage.setItem(CURRENT_PRAYER_STORAGE_KEY, prayer).catch((err) =>
+        console.error("Error saving current prayer:", err)
+      );
+    }
+  }, []);
+
   // Override colors when themePrayer is set
   const effectiveSetColors = useCallback((newColors: ThemeColors) => {
     if (!themePrayer) {
@@ -140,9 +157,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
         setThemePrayer,
         isDarkMode,
         currentPrayer,
-        setCurrentPrayer,
+        setCurrentPrayer: persistedSetCurrentPrayer,
         appIcon,
         setAppIcon,
+        themeLoaded,
       }}
     >
       {children}
