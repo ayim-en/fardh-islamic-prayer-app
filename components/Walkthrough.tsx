@@ -31,10 +31,7 @@ const WALKTHROUGH_STEPS = [
     description:
       "Designed for iOS with custom widgets, allowing you to see prayer times on your Home and Lock screens without even opening the app.",
     image: require("@/assets/images/prayer-pro-bg/prayer-pro-bg-dhur.png"),
-    illustrations: [
-      require("@/assets/images/walkthrough/walkthrough-widget-large.png"),
-      require("@/assets/images/walkthrough/walkthrough-widget-small.png"),
-    ],
+    illustration: require("@/assets/images/walkthrough/walkthrough-widget.png"),
   },
   {
     id: "Asr",
