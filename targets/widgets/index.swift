@@ -424,12 +424,14 @@ struct AllPrayersWidgetView: View {
     var entry: PrayerTimelineEntry
     @Environment(\.colorScheme) var colorScheme
 
-    // Use dark mode for evening prayers (Maghrib, Isha) or if app/system is in dark mode
-    // If theme is set, use that prayer for determining dark mode
     private var effectiveIsDark: Bool {
-        let prayerForTheme = entry.prayerData.themePrayer ?? entry.prayerData.currentPrayer
-        let isEveningPrayer = prayerForTheme == "Maghrib" || prayerForTheme == "Isha"
-        return isEveningPrayer || entry.prayerData.isDarkMode ?? (colorScheme == .dark)
+        if entry.prayerData.themePrayer != nil {
+            // Fixed theme — trust stored isDarkMode
+            return entry.prayerData.isDarkMode ?? (colorScheme == .dark)
+        }
+        // Auto mode — derive from the dynamically calculated currentPrayer
+        let prayer = entry.prayerData.currentPrayer
+        return prayer == "Maghrib" || prayer == "Isha"
     }
 
     var accentColor: Color {
@@ -494,12 +496,14 @@ struct UpcomingPrayerWidgetView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.widgetFamily) var family
 
-    // Use dark mode for evening prayers (Maghrib, Isha) or if app/system is in dark mode
-    // If theme is set, use that prayer for determining dark mode
     private var effectiveIsDark: Bool {
-        let prayerForTheme = entry.prayerData.themePrayer ?? entry.prayerData.currentPrayer
-        let isEveningPrayer = prayerForTheme == "Maghrib" || prayerForTheme == "Isha"
-        return isEveningPrayer || entry.prayerData.isDarkMode ?? (colorScheme == .dark)
+        if entry.prayerData.themePrayer != nil {
+            // Fixed theme — trust stored isDarkMode
+            return entry.prayerData.isDarkMode ?? (colorScheme == .dark)
+        }
+        // Auto mode — derive from the dynamically calculated currentPrayer
+        let prayer = entry.prayerData.currentPrayer
+        return prayer == "Maghrib" || prayer == "Isha"
     }
 
     var accentColor: Color {
