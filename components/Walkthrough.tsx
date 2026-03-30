@@ -168,7 +168,7 @@ export function Walkthrough({ onComplete }: WalkthroughProps) {
             }}
           >
             <Text
-              className="text-4xl font-bold text-left mb-4"
+              className={`text-4xl font-bold mb-4 ${currentStep.id === "Fajr" ? "text-right" : "text-left"}`}
               style={{
                 color:
                   currentStep.id === "Maghrib" || currentStep.id === "Isha"

@@ -1,5 +1,5 @@
 import { AnimatedTintIcon } from "@/components/AnimatedTintIcon";
-import { CALENDAR_METHODS, CalendarSettings as CalendarSettingsType } from "@/constants/calendarSettings";
+import { CALENDAR_METHODS, CalendarMethodId, CalendarSettings as CalendarSettingsType } from "@/constants/calendarSettings";
 import React, { useCallback, useEffect, useState } from "react";
 import { TouchableOpacity, View } from "react-native";
 import Animated from "react-native-reanimated";
@@ -27,27 +27,47 @@ export const CalendarSettingsComponent = ({
   animatedSecondaryTextStyle,
   animatedSeparatorStyle,
 }: CalendarSettingsProps) => {
-  // Local state for day adjustment (allows spamming buttons without saving)
+  // Local state for all settings (changes are batched until Save)
+  const [localCalendarMethod, setLocalCalendarMethod] = useState<CalendarMethodId>(settings.calendarMethod);
+  const [localDateFormat, setLocalDateFormat] = useState<"gregorian" | "hijri">(settings.carouselDateFormat);
   const [localAdjustment, setLocalAdjustment] = useState(settings.adjustment);
-  const isMathematical = settings.calendarMethod === "MATHEMATICAL";
 
-  // Check if local adjustment differs from saved settings
-  const hasUnsavedChanges = localAdjustment !== settings.adjustment;
+  const isMathematical = localCalendarMethod === "MATHEMATICAL";
 
-  // Sync local adjustment when settings change externally or method changes
+  // Sync local state when settings change externally
   useEffect(() => {
+    setLocalCalendarMethod(settings.calendarMethod);
+    setLocalDateFormat(settings.carouselDateFormat);
     setLocalAdjustment(settings.adjustment);
-  }, [settings.adjustment, settings.calendarMethod]);
+  }, [settings]);
 
-  // Save adjustment changes
-  const saveChanges = useCallback(async () => {
-    await updateSettings({ adjustment: localAdjustment });
-  }, [localAdjustment, updateSettings]);
+  // Check if any local state differs from saved settings
+  const hasUnsavedChanges =
+    localCalendarMethod !== settings.calendarMethod ||
+    localDateFormat !== settings.carouselDateFormat ||
+    (isMathematical && localAdjustment !== settings.adjustment);
 
-  // Discard changes
-  const discardChanges = useCallback(() => {
+  // Save all changes at once
+  const saveAllChanges = useCallback(async () => {
+    const changes: Partial<CalendarSettingsType> = {};
+    if (localCalendarMethod !== settings.calendarMethod)
+      changes.calendarMethod = localCalendarMethod;
+    if (localDateFormat !== settings.carouselDateFormat)
+      changes.carouselDateFormat = localDateFormat;
+    if (isMathematical && localAdjustment !== settings.adjustment)
+      changes.adjustment = localAdjustment;
+
+    if (Object.keys(changes).length > 0) {
+      await updateSettings(changes);
+    }
+  }, [localCalendarMethod, localDateFormat, localAdjustment, isMathematical, settings, updateSettings]);
+
+  // Discard all changes
+  const discardAllChanges = useCallback(() => {
+    setLocalCalendarMethod(settings.calendarMethod);
+    setLocalDateFormat(settings.carouselDateFormat);
     setLocalAdjustment(settings.adjustment);
-  }, [settings.adjustment]);
+  }, [settings]);
 
   return (
     <View className="gap-2">
@@ -68,7 +88,7 @@ export const CalendarSettingsComponent = ({
               className="text-sm"
               style={animatedActiveTextStyle}
             >
-              {CALENDAR_METHODS.find((m) => m.id === settings.calendarMethod)
+              {CALENDAR_METHODS.find((m) => m.id === localCalendarMethod)
                 ?.name || "Select Method"}
             </Animated.Text>
           </View>
@@ -93,14 +113,11 @@ export const CalendarSettingsComponent = ({
         {expandedPickers.has("calendarMethod") && (
           <View className="mt-1">
             {CALENDAR_METHODS.map((method) => {
-              const isSelected = settings.calendarMethod === method.id;
+              const isSelected = localCalendarMethod === method.id;
               return (
                 <TouchableOpacity
                   key={method.id}
-                  onPress={() => {
-                    updateSettings({ calendarMethod: method.id });
-                    togglePicker("calendarMethod");
-                  }}
+                  onPress={() => setLocalCalendarMethod(method.id)}
                   className="flex-row items-center py-2 pl-4"
                 >
                   <View className="flex-1">
@@ -147,7 +164,7 @@ export const CalendarSettingsComponent = ({
               className="text-sm"
               style={animatedActiveTextStyle}
             >
-              {settings.carouselDateFormat === "hijri" ? "Hijri" : "Gregorian"}
+              {localDateFormat === "hijri" ? "Hijri" : "Gregorian"}
             </Animated.Text>
           </View>
           <Animated.View
@@ -174,14 +191,11 @@ export const CalendarSettingsComponent = ({
               { id: "gregorian", name: "Gregorian" },
               { id: "hijri", name: "Hijri" },
             ].map((format) => {
-              const isSelected = settings.carouselDateFormat === format.id;
+              const isSelected = localDateFormat === format.id;
               return (
                 <TouchableOpacity
                   key={format.id}
-                  onPress={() => {
-                    updateSettings({ carouselDateFormat: format.id as "gregorian" | "hijri" });
-                    togglePicker("dateFormat");
-                  }}
+                  onPress={() => setLocalDateFormat(format.id as "gregorian" | "hijri")}
                   className="flex-row items-center py-2 pl-4"
                 >
                   <Animated.Text
@@ -268,33 +282,34 @@ export const CalendarSettingsComponent = ({
               </TouchableOpacity>
             </View>
           </View>
-          {/* Save/Discard buttons */}
-          {hasUnsavedChanges && (
-            <View className="flex-row justify-center gap-3 mt-2">
-              <TouchableOpacity
-                onPress={discardChanges}
-                className="px-4 py-2 rounded-lg"
-                style={{ backgroundColor: colors.active + "20" }}
-              >
-                <Animated.Text
-                  className="font-medium"
-                  style={animatedSecondaryTextStyle}
-                >
-                  Discard
-                </Animated.Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={saveChanges}
-                className="px-4 py-2 rounded-lg"
-                style={{ backgroundColor: colors.active }}
-              >
-                <Animated.Text className="font-medium text-white">
-                  Save Changes
-                </Animated.Text>
-              </TouchableOpacity>
-            </View>
-          )}
         </>
+      )}
+
+      {/* Unified Save/Discard buttons */}
+      {hasUnsavedChanges && (
+        <View className="flex-row justify-center gap-3 mt-4">
+          <TouchableOpacity
+            onPress={discardAllChanges}
+            className="px-4 py-2 rounded-lg"
+            style={{ backgroundColor: colors.active + "20" }}
+          >
+            <Animated.Text
+              className="font-medium"
+              style={animatedSecondaryTextStyle}
+            >
+              Discard
+            </Animated.Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={saveAllChanges}
+            className="px-4 py-2 rounded-lg"
+            style={{ backgroundColor: colors.active }}
+          >
+            <Animated.Text className="font-medium text-white">
+              Save Changes
+            </Animated.Text>
+          </TouchableOpacity>
+        </View>
       )}
     </View>
   );

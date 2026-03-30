@@ -455,7 +455,7 @@ export default function SettingsHome() {
           {
             id: "debug",
             title: "Debug",
-            icon: require("../../../assets/images/prayer-pro-icons/settings-tab/settings-about.png"),
+            icon: require("../../../assets/images/prayer-pro-icons/bottom-tab/icon-settings.png"),
             data: [
               {
                 id: "debug-content",
