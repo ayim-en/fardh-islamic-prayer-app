@@ -2,6 +2,8 @@
 
 Cross-platform mobile app with real-time prayer time calculations supporting 24 calculation methods and dual juristic schools, currently undergoing final testing through Test Flight
 
+<img width="1280" height="720" alt="app-spread" src="https://github.com/user-attachments/assets/0aa73b9c-9193-4979-b2cf-22f7aafe956c" />
+
 ## ✨ Features
 
 * **Prayer Times & Islamic Calendar:** Fetches real-time data via the [Aladhan Prayer Times API](https://aladhan.com/prayer-times-api) and [Aladhan Islamic Calendar API](https://aladhan.com/islamic-calendar-api) to keep users updated with accurate prayer schedules and lunar dates.
