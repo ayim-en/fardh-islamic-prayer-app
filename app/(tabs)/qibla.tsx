@@ -64,7 +64,7 @@ const GuidanceText = ({
     (key) => {
       runOnJS(updateGuidanceKey)(key);
     },
-    [qiblaDirection]
+    [qiblaDirection],
   );
 
   const guidance = guidanceKey === "kaaba" ? "Facing the " : "Turn to your ";
@@ -95,7 +95,12 @@ export default function Qibla() {
     error: locationError,
     refreshLocation,
   } = useLocation();
-  const { qiblaData, loading, error: qiblaError, refreshQibla } = useQiblaDirection(location);
+  const {
+    qiblaData,
+    loading,
+    error: qiblaError,
+    refreshQibla,
+  } = useQiblaDirection(location);
   const { currentPrayer } = usePrayerTimes(location);
   const { heading: deviceHeading, restartHeading } = useDeviceHeading();
   const { colors, themePrayer, isDarkMode } = useThemeColors();
@@ -104,19 +109,13 @@ export default function Qibla() {
     : lightModeColors.background;
   const isFocused = useIsFocused();
   const [motionPermission, setMotionPermission] = useState<boolean | null>(
-    null
+    null,
   );
 
-  // Check and request motion permission
+  // Check motion permission status only
   const checkMotionPermission = useCallback(async () => {
     const { status } = await DeviceMotion.getPermissionsAsync();
-    if (status !== "granted") {
-      // Request permission if not granted
-      const { status: newStatus } = await DeviceMotion.requestPermissionsAsync();
-      setMotionPermission(newStatus === "granted");
-    } else {
-      setMotionPermission(true);
-    }
+    setMotionPermission(status === "granted");
   }, []);
 
   // Check motion permission on mount
@@ -169,7 +168,7 @@ export default function Qibla() {
         runOnJS(triggerVibration)();
       }
     },
-    [isFocused]
+    [isFocused],
   );
 
   // Get the background image based on the current prayer (null if not loaded yet)

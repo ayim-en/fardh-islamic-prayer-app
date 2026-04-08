@@ -110,7 +110,7 @@ export function HolidayBottomSheet({
 
               {/* Title */}
               <Text
-                className="text-2xl font-bold mt-3"
+                className="text-2xl font-bold mt-3 text-center"
                 style={{ color: colors.active }}
                 accessibilityRole="header"
               >
@@ -137,7 +137,7 @@ export function HolidayBottomSheet({
                       </Text>
                     )}
                     <Text
-                      className="text-base"
+                      className="text-base text-center"
                       style={{ color: themeColors.text }}
                     >
                       {HOLIDAY_DESCRIPTIONS[name] ||
