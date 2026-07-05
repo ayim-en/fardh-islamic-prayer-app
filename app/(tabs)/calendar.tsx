@@ -1,11 +1,8 @@
-import { AnimatedTintIcon } from "@/components/AnimatedTintIcon";
 import { CalendarCard, CalendarCardRef } from "@/components/CalendarCard";
-import { CalendarHeader } from "@/components/CalendarHeader";
 import { HolidayBottomSheet } from "@/components/HolidayBottomSheet";
 import {
   darkModeColors,
   lightModeColors,
-  prayerBackgrounds,
   prayerThemeColors,
 } from "@/constants/prayers";
 import { useCalendarSettings } from "@/context/CalendarSettingsContext";
@@ -15,7 +12,6 @@ import {
   useAnimatedTextColor,
 } from "@/hooks/useAnimatedColor";
 import { useLocation } from "@/hooks/useLocation";
-import { usePrayerTimes } from "@/hooks/usePrayerTimes";
 import {
   NextHijriHolidayData,
   fetchNextIncludedHijriHoliday,
@@ -36,31 +32,18 @@ import React, {
   useRef,
   useState,
 } from "react";
-import {
-  Animated,
-  Dimensions,
-  Easing,
-  Pressable,
-  Text,
-  View,
-} from "react-native";
+import { Text, View } from "react-native";
 import Reanimated from "react-native-reanimated";
-
-const { width } = Dimensions.get("window");
-
-// Animation constants
-const ANIMATION_DURATION_IN = 250;
-const ANIMATION_DURATION_OUT = 300;
 
 export default function CalendarScreen() {
   const [selectedDate, setSelectedDate] = useState(getTodayISO());
   const [nextHoliday, setNextHoliday] = useState<NextHijriHolidayData | null>(
-    null
+    null,
   );
   const [isHolidaySheetOpen, setIsHolidaySheetOpen] = useState(false);
   const [sheetHolidays, setSheetHolidays] = useState<string[]>([]);
   const [isReady, setIsReady] = useState(false);
-  const { colors, themePrayer, isDarkMode } = useThemeColors();
+  const { colors, isDarkMode } = useThemeColors();
   const { settings: calendarSettings, loading: calendarSettingsLoading } =
     useCalendarSettings();
   const bgColor = isDarkMode
@@ -68,14 +51,9 @@ export default function CalendarScreen() {
     : lightModeColors.background;
   const animatedBgStyle = useAnimatedBackgroundColor(bgColor);
   const animatedActiveTextStyle = useAnimatedTextColor(colors.active);
-  const { location, locationName, error: locationError } = useLocation();
-  const { currentPrayer } = usePrayerTimes(location);
+  const animatedSecondaryTextStyle = useAnimatedTextColor(colors.inactive);
+  const { error: locationError } = useLocation();
   const [holidayMarks, setHolidayMarks] = useState<Record<string, any>>({});
-
-  // Animation state for holiday badge
-  const holidayBadgeAnim = useRef(new Animated.Value(0)).current; // Start at bottom edge of calendar
-  const [displayedHolidays, setDisplayedHolidays] = useState<string[]>([]);
-  const prevHolidaysRef = useRef<string[]>([]);
 
   // Ref and navigation for scrolling to today on tab press
   const calendarRef = useRef<CalendarCardRef>(null);
@@ -103,12 +81,6 @@ export default function CalendarScreen() {
 
     return () => cancelAnimationFrame(frameId);
   }, []);
-
-  // Use theme prayer if set, otherwise use actual current prayer for background (null if not loaded yet)
-  const displayPrayer = themePrayer || currentPrayer?.prayer;
-  const backgroundImage = displayPrayer
-    ? prayerBackgrounds[displayPrayer] || null
-    : null;
 
   useEffect(() => {
     if (calendarSettingsLoading) return;
@@ -150,42 +122,41 @@ export default function CalendarScreen() {
     };
   }, [calendarSettings, calendarSettingsLoading]);
 
-  // Get holiday names for the selected date (if any)
-  const selectedHolidays = useMemo(() => {
-    const mark = holidayMarks[selectedDate];
-    return mark?.holidays || [];
-  }, [holidayMarks, selectedDate]);
+  // Select the tapped day and pop up the holiday sheet when it has holidays
+  const handleDayPress = useCallback(
+    (day: { dateString: string }) => {
+      setSelectedDate(day.dateString);
+      const holidays = holidayMarks[day.dateString]?.holidays;
+      if (holidays?.length) {
+        setSheetHolidays(holidays);
+        setIsHolidaySheetOpen(true);
+      }
+    },
+    [holidayMarks],
+  );
 
-  // Animate holiday badge in/out when selectedHolidays changes
-  useEffect(() => {
-    const prev = prevHolidaysRef.current;
-    const isSame =
-      selectedHolidays.length === prev.length &&
-      selectedHolidays.every((h: string, i: number) => h === prev[i]);
+  // Upcoming/current holiday shown in the fixed banner above the list
+  const nextHolidayName =
+    nextHoliday?.hijri?.holidays?.[0] || nextHoliday?.gregorian?.holidays?.[0];
+  const hasNextHoliday = nextHolidayName !== undefined;
+  const isHolidayToday =
+    hasNextHoliday &&
+    nextHoliday?.gregorian?.date != null &&
+    convertDDMMYYYYToISO(nextHoliday.gregorian.date) === getTodayISO();
+  const nextHolidayDateLabel = useMemo(() => {
+    if (!nextHoliday?.gregorian?.date) return null;
+    const [day, month, year] = nextHoliday.gregorian.date
+      .split("-")
+      .map(Number);
+    return new Date(year, month - 1, day).toLocaleDateString(undefined, {
+      month: "long",
+      day: "numeric",
+    });
+  }, [nextHoliday]);
 
-    if (selectedHolidays.length > 0) {
-      if (isSame) return; // Skip animation if same holiday
-      // Update displayed holidays and animate down from calendar
-      setDisplayedHolidays(selectedHolidays);
-      prevHolidaysRef.current = selectedHolidays;
-      holidayBadgeAnim.setValue(0);
-      Animated.timing(holidayBadgeAnim, {
-        toValue: 70,
-        duration: ANIMATION_DURATION_IN,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }).start();
-    } else {
-      prevHolidaysRef.current = [];
-      // Animate back up behind calendar
-      Animated.timing(holidayBadgeAnim, {
-        toValue: 0,
-        duration: ANIMATION_DURATION_OUT,
-        easing: Easing.out(Easing.quad),
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [selectedHolidays, holidayBadgeAnim]);
+  const secondaryTextColor = isDarkMode
+    ? darkModeColors.textSecondary
+    : lightModeColors.textSecondary;
 
   const isLocationError = locationError?.toLowerCase().includes("location");
 
@@ -230,61 +201,54 @@ export default function CalendarScreen() {
 
   return (
     <View className="flex-1" style={{ backgroundColor: bgColor }}>
-      <CalendarHeader
-        locationName={locationName}
-        backgroundImage={backgroundImage}
-        currentPrayer={currentPrayer}
-        nextHoliday={nextHoliday}
-      />
-      <View className="flex-1 items-center justify-center p-4 pt-24">
-        <View style={{ position: "relative" }}>
-          <Animated.View
-            className="absolute left-0 right-0 items-center"
-            style={{
-              bottom: 0,
-              transform: [{ translateY: holidayBadgeAnim }],
-            }}
-          >
-            <Pressable
-              onPress={() => {
-                setSheetHolidays(displayedHolidays);
-                setIsHolidaySheetOpen(true);
-              }}
+      <View className="pt-24 px-5 pb-5">
+        <Text
+          className="text-base font-semibold uppercase"
+          style={{ color: secondaryTextColor }}
+        >
+          {nextHoliday
+            ? hasNextHoliday
+              ? isHolidayToday
+                ? "Current Holiday"
+                : "Upcoming Holiday"
+              : "No Upcoming Holiday"
+            : "Loading Holidays..."}
+        </Text>
+        {hasNextHoliday && (
+          <View className="flex-row items-baseline justify-between gap-2 mt-1">
+            <Reanimated.Text
+              className="text-3xl font-bold flex-shrink"
+              numberOfLines={1}
+              style={animatedActiveTextStyle}
             >
-              <Reanimated.View
-                className="rounded-2xl p-4 flex-row gap-2 items-center"
-                style={animatedBgStyle}
+              {nextHolidayName}
+            </Reanimated.Text>
+            {nextHolidayDateLabel && !isHolidayToday && (
+              <Reanimated.Text
+                className="text-2xl font-semibold"
+                style={animatedSecondaryTextStyle}
               >
-                {displayedHolidays.map((holiday: string, index: number) => (
-                  <Reanimated.Text
-                    key={index}
-                    className="text-center text-xl font-semibold"
-                    style={animatedActiveTextStyle}
-                  >
-                    {holiday}
-                  </Reanimated.Text>
-                ))}
-                <AnimatedTintIcon
-                  source={require("../../assets/images/prayer-pro-icons/calendar-tab/calendar-info.png")}
-                  tintColor={colors.active}
-                  size={24}
-                />
-              </Reanimated.View>
-            </Pressable>
-          </Animated.View>
+                {nextHolidayDateLabel}
+              </Reanimated.Text>
+            )}
+          </View>
+        )}
+      </View>
+      <View className="flex-1">
+        <View className="flex-1 w-full" style={{ position: "relative" }}>
           {isReady ? (
             <CalendarCard
               ref={calendarRef}
               selectedDate={selectedDate}
-              onDayPress={(day) => setSelectedDate(day.dateString)}
+              onDayPress={handleDayPress}
               holidayMarks={holidayMarks}
               colors={colors}
               isDarkMode={isDarkMode}
             />
           ) : (
             <Reanimated.View
-              className="rounded-3xl overflow-hidden items-center justify-center"
-              style={[{ width: width, height: width }, animatedBgStyle]}
+              className="flex-1 w-full rounded-t-3xl overflow-hidden items-center justify-center"
+              style={animatedBgStyle}
             />
           )}
         </View>

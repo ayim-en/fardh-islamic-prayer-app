@@ -81,18 +81,69 @@ export const findNextUpcomingHoliday = (days: CalendarDay[]): CalendarDay | null
   return upcomingHolidays.length > 0 ? upcomingHolidays[0] : null;
 };
 
-// Generate array of month strings (YYYY-MM-DD format for first day of each month)
-// Used for calendar carousel
-export const generateCarouselMonths = (): string[] => {
-  const months: string[] = [];
+// A single day row in the vertical calendar list
+export interface CalendarListDay {
+  dateString: string; // "YYYY-MM-DD"
+  dayOfMonth: number;
+  dayOfWeek: string; // e.g. "Sat"
+}
+
+// A month group with a sticky header title
+export interface CalendarListSection {
+  title: string; // e.g. "July 2026"
+  data: CalendarListDay[];
+}
+
+// Generate month sections (12 months before and 12 months after current month)
+// with one entry per day. Used for the vertical calendar list.
+export const generateCalendarSections = (): CalendarListSection[] => {
+  const sections: CalendarListSection[] = [];
   const today = new Date();
 
   for (let i = -PAST_MONTHS; i <= FUTURE_MONTHS; i++) {
-    const date = new Date(today.getFullYear(), today.getMonth() + i, 1);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    months.push(`${year}-${month}-01`);
+    const monthStart = new Date(today.getFullYear(), today.getMonth() + i, 1);
+    const daysInMonth = new Date(
+      monthStart.getFullYear(),
+      monthStart.getMonth() + 1,
+      0
+    ).getDate();
+
+    const data: CalendarListDay[] = [];
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(monthStart.getFullYear(), monthStart.getMonth(), day);
+      data.push({
+        dateString: getLocalISODate(date),
+        dayOfMonth: day,
+        dayOfWeek: date.toLocaleDateString(undefined, { weekday: "short" }),
+      });
+    }
+
+    sections.push({
+      title: monthStart.toLocaleDateString(undefined, {
+        month: "long",
+        year: "numeric",
+      }),
+      data,
+    });
   }
 
-  return months;
+  return sections;
+};
+
+// Locate today's row within the generated sections
+export const findTodayLocation = (
+  sections: CalendarListSection[]
+): { sectionIndex: number; itemIndex: number } => {
+  const todayISO = getTodayISO();
+
+  for (let sectionIndex = 0; sectionIndex < sections.length; sectionIndex++) {
+    const itemIndex = sections[sectionIndex].data.findIndex(
+      (day) => day.dateString === todayISO
+    );
+    if (itemIndex !== -1) {
+      return { sectionIndex, itemIndex };
+    }
+  }
+
+  return { sectionIndex: 0, itemIndex: 0 };
 };
