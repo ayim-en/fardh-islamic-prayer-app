@@ -2,7 +2,7 @@
 
 Cross-platform mobile app with real-time prayer time calculations supporting 24 calculation methods and dual juristic schools, currently undergoing final testing through Test Flight
 
-<img width="1280" height="720" alt="app-spread" src="https://github.com/user-attachments/assets/0aa73b9c-9193-4979-b2cf-22f7aafe956c" />
+<img width="1920" height="1080" alt="fardh-readme" src="https://github.com/user-attachments/assets/9fa3a8ba-435b-4397-b586-3d51e1479be5" />
 
 ## ✨ Features
 
