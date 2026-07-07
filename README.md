@@ -24,6 +24,5 @@ Cross-platform mobile app with real-time prayer time calculations supporting 24 
 
 * **[React Native Reusables](https://reactnativereusables.com/docs):** Unstyled, accessible, and customizable components.
 * **[RNUI (React Native UI Lib)](https://wix.github.io/react-native-ui-lib/docs/category/basic):** Comprehensive UI toolset and component library.
-* **[RNC (React Native Calendars)](https://wix.github.io/react-native-calendars/docs/Components/Calendar):** Robust calendar components for React Native.
 
 * **Design Assets:** UI/UX designed in **Figma**, featuring free line icons from **[IconScout](https://iconscout.com/unicons/free-line-icons)**.
