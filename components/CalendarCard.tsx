@@ -6,6 +6,7 @@ import {
 import {
   CalendarListDay,
   CalendarListSection,
+  findDateLocation,
   findTodayLocation,
   generateCalendarSections,
   getTodayISO,
@@ -36,6 +37,7 @@ interface CalendarCardProps {
 
 export interface CalendarCardRef {
   scrollToToday: () => void;
+  scrollToDate: (dateString: string) => void;
 }
 
 interface DayRowProps {
@@ -166,6 +168,16 @@ export const CalendarCard = forwardRef<CalendarCardRef, CalendarCardProps>(
         listRef.current?.scrollToLocation({
           sectionIndex: todayLocation.sectionIndex,
           itemIndex: todayLocation.itemIndex,
+          viewOffset: HEADER_HEIGHT,
+          animated: true,
+        });
+      },
+      scrollToDate: (dateString: string) => {
+        const location = findDateLocation(sections, dateString);
+        if (!location) return;
+        listRef.current?.scrollToLocation({
+          sectionIndex: location.sectionIndex,
+          itemIndex: location.itemIndex,
           viewOffset: HEADER_HEIGHT,
           animated: true,
         });

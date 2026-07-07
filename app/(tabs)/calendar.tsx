@@ -32,7 +32,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import Reanimated from "react-native-reanimated";
 
 export default function CalendarScreen() {
@@ -158,6 +158,25 @@ export default function CalendarScreen() {
     ? darkModeColors.textSecondary
     : lightModeColors.textSecondary;
 
+  // Banner interactions: name opens the holiday sheet, date jumps the list
+  const nextHolidayISO = nextHoliday?.gregorian?.date
+    ? convertDDMMYYYYToISO(nextHoliday.gregorian.date)
+    : null;
+
+  const openNextHolidaySheet = () => {
+    if (!nextHolidayName) return;
+    const holidays = (nextHolidayISO &&
+      holidayMarks[nextHolidayISO]?.holidays) || [nextHolidayName];
+    setSheetHolidays(holidays);
+    setIsHolidaySheetOpen(true);
+  };
+
+  const jumpToNextHoliday = () => {
+    if (!nextHolidayISO) return;
+    setSelectedDate(nextHolidayISO);
+    calendarRef.current?.scrollToDate(nextHolidayISO);
+  };
+
   const isLocationError = locationError?.toLowerCase().includes("location");
 
   if (locationError) {
@@ -215,21 +234,29 @@ export default function CalendarScreen() {
             : "Loading Holidays..."}
         </Text>
         {hasNextHoliday && (
-          <View className="flex-row items-baseline justify-between gap-2 mt-1">
-            <Reanimated.Text
-              className="text-3xl font-bold flex-shrink"
-              numberOfLines={1}
-              style={animatedActiveTextStyle}
+          <View className="flex-row items-end justify-between gap-2 mt-1">
+            <Pressable
+              onPress={openNextHolidaySheet}
+              className="flex-shrink"
+              hitSlop={8}
             >
-              {nextHolidayName}
-            </Reanimated.Text>
-            {nextHolidayDateLabel && !isHolidayToday && (
               <Reanimated.Text
-                className="text-2xl font-semibold"
-                style={animatedSecondaryTextStyle}
+                className="text-3xl font-bold"
+                numberOfLines={1}
+                style={animatedActiveTextStyle}
               >
-                {nextHolidayDateLabel}
+                {nextHolidayName}
               </Reanimated.Text>
+            </Pressable>
+            {nextHolidayDateLabel && !isHolidayToday && (
+              <Pressable onPress={jumpToNextHoliday} hitSlop={8}>
+                <Reanimated.Text
+                  className="text-2xl font-semibold"
+                  style={animatedSecondaryTextStyle}
+                >
+                  {nextHolidayDateLabel}
+                </Reanimated.Text>
+              </Pressable>
             )}
           </View>
         )}

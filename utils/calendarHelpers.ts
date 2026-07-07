@@ -130,20 +130,26 @@ export const generateCalendarSections = (): CalendarListSection[] => {
   return sections;
 };
 
-// Locate today's row within the generated sections
-export const findTodayLocation = (
-  sections: CalendarListSection[]
-): { sectionIndex: number; itemIndex: number } => {
-  const todayISO = getTodayISO();
-
+// Locate a specific date's row within the generated sections
+export const findDateLocation = (
+  sections: CalendarListSection[],
+  dateString: string
+): { sectionIndex: number; itemIndex: number } | null => {
   for (let sectionIndex = 0; sectionIndex < sections.length; sectionIndex++) {
     const itemIndex = sections[sectionIndex].data.findIndex(
-      (day) => day.dateString === todayISO
+      (day) => day.dateString === dateString
     );
     if (itemIndex !== -1) {
       return { sectionIndex, itemIndex };
     }
   }
 
-  return { sectionIndex: 0, itemIndex: 0 };
+  return null;
+};
+
+// Locate today's row within the generated sections
+export const findTodayLocation = (
+  sections: CalendarListSection[]
+): { sectionIndex: number; itemIndex: number } => {
+  return findDateLocation(sections, getTodayISO()) ?? { sectionIndex: 0, itemIndex: 0 };
 };
