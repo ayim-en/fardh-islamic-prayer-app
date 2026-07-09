@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+<title>Fardh Support</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --card: #f9fafb;
+    --ink: #000000;
+    --ink-soft: #374151;
+    --ink-faint: #4b5563;
+    --label: #b6c1cd;
+    --accent: #568FAF;
+    --line: #e5eaf0;
+    --shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a2e;
+      --card: #2a2a3e;
+      --ink: #ffffff;
+      --ink-soft: #e0e0e0;
+      --ink-faint: #d0d0d0;
+      --label: #8898a8;
+      --accent: #7EB8D8;
+      --line: #34344a;
+      --shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 42rem; margin: 0 auto; padding: 4rem 1.5rem 5rem; }
+  .brand {
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  h1 {
+    font-weight: 700;
+    font-size: 2.3rem;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin: 0.5rem 0 0.75rem;
+  }
+  .tagline { color: var(--ink-soft); }
+  .star-rule {
+    display: flex; align-items: center; gap: 0.85rem;
+    margin: 2.2rem 0;
+    color: var(--accent);
+  }
+  .star-rule::before, .star-rule::after {
+    content: ""; flex: 1; height: 1px; background: var(--line);
+  }
+  h2 {
+    font-weight: 700;
+    font-size: 1.35rem;
+    letter-spacing: -0.01em;
+    margin: 2.2rem 0 0.6rem;
+  }
+  p { margin-bottom: 1rem; }
+  a { color: var(--accent); text-underline-offset: 3px; }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .contact-card {
+    background: var(--card);
+    padding: 1.25rem 1.4rem;
+    margin: 1.5rem 0 0;
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+  }
+  dt { font-weight: 600; margin-top: 1.2rem; }
+  dd { margin: 0.25rem 0 0; color: var(--ink-soft); }
+  footer {
+    margin-top: 3.5rem; padding-top: 1.5rem;
+    border-top: 1px solid var(--line);
+    color: var(--ink-soft); font-size: 0.9rem;
+  }
+</style>
+</head>
+<body>
+<main>
+  <p class="brand">Fardh</p>
+  <h1>Support</h1>
+  <p class="tagline">Fardh is a free prayer times app for iOS, adhan notifications, Qibla direction, the Hijri calendar, and home screen widgets. No ads, no accounts, no tracking.</p>
+
+  <div class="contact-card">
+    <p style="margin:0"><strong>Need help or found a bug?</strong> Email <a href="mailto:fardh.support@gmail.com">fardh.support@gmail.com</a> and include your iOS version and a short description of what happened. We read everything.</p>
+  </div>
+
+  <div class="star-rule" aria-hidden="true">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0l2.6 6.2L21 4.5l-1.7 6.4L24 12l-4.7 1.1L21 19.5l-6.4-1.7L12 24l-2.6-6.2L3 19.5l1.7-6.4L0 12l4.7-1.1L3 4.5l6.4 1.7z"/></svg>
+  </div>
+
+  <h2>Common questions</h2>
+  <dl>
+    <dt>Why does Fardh ask for my location?</dt>
+    <dd>Prayer times and the Qibla direction depend on where you are. Your coordinates are sent to the AlAdhan prayer times service to calculate them, nothing is stored, and nothing else is collected. See the <a href="./fardh-privacy.html">privacy policy</a>.</dd>
+
+    <dt>My prayer times look slightly different from my mosque's.</dt>
+    <dd>Mosques follow a specific calculation method. Open Fardh's settings and choose the method your community uses. 24 methods are supported, including ISNA, Muslim World League, Umm al-Qura, and more.</dd>
+
+    <dt>Notifications aren't arriving.</dt>
+    <dd>Check that notifications are allowed for Fardh in iOS Settings → Notifications, and that Focus or Do Not Disturb isn't silencing them. Opening the app refreshes the upcoming schedule.</dd>
+
+    <dt>The widget isn't updating.</dt>
+    <dd>iOS refreshes widgets on its own schedule. Opening the app updates the timeline immediately; otherwise it refreshes periodically throughout the day.</dd>
+  </dl>
+
+  <footer>
+    <p>Fardh · <a href="./fardh-privacy.html">Privacy Policy</a> · <a href="mailto:fardh.support@gmail.com">fardh.support@gmail.com</a></p>
+  </footer>
+</main>
+</body>
+</html>

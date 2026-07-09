@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+<title>Privacy Policy Fardh</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --card: #f9fafb;
+    --ink: #000000;
+    --ink-soft: #374151;
+    --ink-faint: #4b5563;
+    --label: #b6c1cd;
+    --accent: #568FAF;
+    --line: #e5eaf0;
+    --shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a2e;
+      --card: #2a2a3e;
+      --ink: #ffffff;
+      --ink-soft: #e0e0e0;
+      --ink-faint: #d0d0d0;
+      --label: #8898a8;
+      --accent: #7EB8D8;
+      --line: #34344a;
+      --shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 42rem; margin: 0 auto; padding: 4rem 1.5rem 5rem; }
+  .brand {
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  h1 {
+    font-weight: 700;
+    font-size: 2.3rem;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin: 0.5rem 0 0.35rem;
+  }
+  .effective { color: var(--ink-soft); font-size: 0.95rem; }
+  .star-rule {
+    display: flex; align-items: center; gap: 0.85rem;
+    margin: 2.2rem 0;
+    color: var(--accent);
+  }
+  .star-rule::before, .star-rule::after {
+    content: ""; flex: 1; height: 1px; background: var(--line);
+  }
+  h2 {
+    font-weight: 700;
+    font-size: 1.35rem;
+    letter-spacing: -0.01em;
+    margin: 2.4rem 0 0.6rem;
+  }
+  p { margin-bottom: 1rem; }
+  ul { margin: 0 0 1rem 1.2rem; }
+  li { margin-bottom: 0.45rem; }
+  a { color: var(--accent); text-underline-offset: 3px; }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .summary {
+    background: var(--card);
+    padding: 1.25rem 1.4rem;
+    margin: 1.5rem 0 0;
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+  }
+  footer {
+    margin-top: 3.5rem; padding-top: 1.5rem;
+    border-top: 1px solid var(--line);
+    color: var(--ink-soft); font-size: 0.9rem;
+  }
+</style>
+</head>
+<body>
+<main>
+  <p class="brand">Fardh</p>
+  <h1>Privacy Policy</h1>
+  <p class="effective">Effective July 9, 2026</p>
+
+  <div class="summary">
+    <p style="margin:0"><strong>In short:</strong> Fardh has no accounts, no ads, no analytics, and no tracking. The only data that ever leaves your device is your location, sent to the AlAdhan prayer times service to calculate your prayer schedule and Qibla direction. We operate no servers and store nothing about you.</p>
+  </div>
+
+  <div class="star-rule" aria-hidden="true">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0l2.6 6.2L21 4.5l-1.7 6.4L24 12l-4.7 1.1L21 19.5l-6.4-1.7L12 24l-2.6-6.2L3 19.5l1.7-6.4L0 12l4.7-1.1L3 4.5l6.4 1.7z"/></svg>
+  </div>
+
+  <h2>Location</h2>
+  <p>With your permission, Fardh reads your device's location and sends the coordinates to the <a href="https://aladhan.com/prayer-times-api">AlAdhan API</a>, a free service operated by <a href="https://islamic.network">Islamic Network</a>, for a purpose: calculating prayer times, Hijri calendar dates, and the Qibla direction for where you are.</p>
+  <ul>
+    <li>Your location is used only to service these requests. We do not store it, Fardh has no servers of its own.</li>
+    <li>Your location is never linked to your identity, sold, shared with advertisers, or used for tracking of any kind.</li>
+    <li>You can revoke location access at any time in iOS Settings. The app cannot calculate times for your position without it, but nothing else changes.</li>
+  </ul>
+  <p>AlAdhan's own handling of requests is described in their <a href="https://aladhan.com/credits-and-terms">terms</a>.</p>
+
+  <h2>Data stored on your device</h2>
+  <p>Your preferences, calculation method, juristic school for Asr, notification settings, and recently fetched prayer times are cached locally on your device so the app works smoothly. This data never leaves your phone and is removed when you delete the app.</p>
+
+  <h2>Notifications</h2>
+  <p>Prayer notifications are scheduled locally on your device. No notification data is sent to us or to any third party.</p>
+
+  <h2>Compass and motion</h2>
+  <p>The Qibla compass uses your device's orientation sensors on-device only, to point toward the bearing returned by the AlAdhan Qibla API. Sensor data is never transmitted anywhere.</p>
+
+  <h2>What we don't collect</h2>
+  <ul>
+    <li>No accounts, names, emails, or contact information</li>
+    <li>No analytics or usage statistics</li>
+    <li>No advertising identifiers, Fardh contains no ads</li>
+    <li>No tracking across apps or websites</li>
+  </ul>
+
+  <h2>Children</h2>
+  <p>Fardh is suitable for all ages and collects no personal information from anyone, including children.</p>
+
+  <h2>Changes to this policy</h2>
+  <p>If this policy changes, the updated version will be posted at this address with a new effective date. Since Fardh collects nothing beyond what's described here, changes are expected to be rare.</p>
+
+  <h2>Contact</h2>
+  <p>Questions about privacy? Email <a href="mailto:fardh.support@gmail.com">fardh.support@gmail.com</a>.</p>
+
+  <footer>
+    <p>Fardh · <a href="./index.html">Support</a> · <a href="mailto:fardh.support@gmail.com">fardh.support@gmail.com</a></p>
+  </footer>
+</main>
+</body>
+</html>
