@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 import { useCallback, useEffect, useState } from "react";
+import { AppState } from "react-native";
 
 const LOCATION_STORAGE_KEY = "cachedLocation";
 const LOCATION_NAME_STORAGE_KEY = "cachedLocationName";
@@ -53,6 +54,17 @@ export const useLocation = () => {
   useEffect(() => {
     fetchLocation();
   }, [fetchLocation]);
+
+  // While in the error state, retry when the app returns to the foreground —
+  // granting permission (in-app prompt or system settings) cycles AppState,
+  // so this clears the warning without requiring an app restart
+  useEffect(() => {
+    if (!error) return;
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") fetchLocation();
+    });
+    return () => subscription.remove();
+  }, [error, fetchLocation]);
 
   // Uses location data to get city and country name
   useEffect(() => {

@@ -3,8 +3,23 @@ import {
   cancelAllPrayerNotifications,
   requestNotificationPermissions,
 } from "@/utils/notificationService";
+import { openSettings } from "@/utils/openSettings";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { Alert } from "react-native";
+
+// iOS never re-prompts once notification permission is denied, so a denied
+// request can only be fixed from the system settings
+const showPermissionDeniedAlert = () => {
+  Alert.alert(
+    "Notifications Disabled",
+    "Notifications for Fardh are turned off in your device settings. Allow them to receive prayer time reminders.",
+    [
+      { text: "Cancel", style: "cancel" },
+      { text: "Open Settings", onPress: openSettings },
+    ]
+  );
+};
 
 const NOTIFICATIONS_ENABLED_KEY = "prayerNotifications";
 const MASTER_TOGGLE_KEY = "notificationsMasterToggle";
@@ -80,7 +95,7 @@ export const NotificationSettingsProvider: React.FC<{
     if (willBeEnabled) {
       const hasPermission = await requestNotificationPermissions();
       if (!hasPermission) {
-        console.log("Notification permission denied");
+        showPermissionDeniedAlert();
         return;
       }
 
@@ -119,7 +134,7 @@ export const NotificationSettingsProvider: React.FC<{
     if (willBeEnabled) {
       const hasPermission = await requestNotificationPermissions();
       if (!hasPermission) {
-        console.log("Notification permission denied");
+        showPermissionDeniedAlert();
         return;
       }
     }

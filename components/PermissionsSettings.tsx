@@ -1,8 +1,18 @@
+import { openSettings } from "@/utils/openSettings";
 import * as Location from "expo-location";
 import { DeviceMotion } from "expo-sensors";
 import React, { useCallback, useEffect, useState } from "react";
-import { Linking, Platform, Switch, View } from "react-native";
+import { Alert, AppState, Switch, View } from "react-native";
 import Animated from "react-native-reanimated";
+
+// iOS only shows the permission prompt once; after a denial it can only be
+// changed in the system settings
+const showOpenSettingsAlert = (message: string) => {
+  Alert.alert("Permissions", message, [
+    { text: "Cancel", style: "cancel" },
+    { text: "Open Settings", onPress: openSettings },
+  ]);
+};
 
 interface PermissionsSettingsProps {
   colors: { active: string; inactive: string };
@@ -32,43 +42,49 @@ export const PermissionsSettings = ({
 
   useEffect(() => {
     checkPermissions();
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") checkPermissions();
+    });
+    return () => subscription.remove();
   }, [checkPermissions]);
-
-  const openSettings = () => {
-    if (Platform.OS === "ios") {
-      Linking.openURL("app-settings:");
-    } else {
-      Linking.openSettings();
-    }
-  };
 
   const handleLocationToggle = async () => {
     if (locationEnabled) {
-      // Can't change permission in app, open settings
-      openSettings();
-    } else {
+      showOpenSettingsAlert(
+        "Location access can only be turned off in your device settings."
+      );
+      return;
+    }
+    const current = await Location.getForegroundPermissionsAsync();
+    if (current.granted) {
+      setLocationEnabled(true);
+    } else if (current.canAskAgain) {
       const result = await Location.requestForegroundPermissionsAsync();
-      if (result.status === "granted") {
-        setLocationEnabled(true);
-      } else {
-        // Permission denied, open settings
-        openSettings();
-      }
+      setLocationEnabled(result.status === "granted");
+    } else {
+      showOpenSettingsAlert(
+        "Location access for Fardh is turned off in your device settings. Allow it there to see accurate prayer times."
+      );
     }
   };
 
   const handleMotionToggle = async () => {
     if (motionEnabled) {
-      // Can't change permission in app, open settings
-      openSettings();
-    } else {
+      showOpenSettingsAlert(
+        "Motion access can only be turned off in your device settings."
+      );
+      return;
+    }
+    const current = await DeviceMotion.getPermissionsAsync();
+    if (current.granted) {
+      setMotionEnabled(true);
+    } else if (current.canAskAgain) {
       const result = await DeviceMotion.requestPermissionsAsync();
-      if (result.status === "granted") {
-        setMotionEnabled(true);
-      } else {
-        // Permission denied, open settings
-        openSettings();
-      }
+      setMotionEnabled(result.status === "granted");
+    } else {
+      showOpenSettingsAlert(
+        "Motion access for Fardh is turned off in your device settings. Allow it there to use the Qibla compass."
+      );
     }
   };
 

@@ -4,7 +4,6 @@ import {
   darkModeColors,
   lightModeColors,
   prayerBackgrounds,
-  prayerThemeColors,
 } from "@/constants/prayers";
 import { useThemeColors } from "@/context/ThemeContext";
 import { useAnimatedTextColor } from "@/hooks/useAnimatedColor";
@@ -199,8 +198,14 @@ export default function Qibla() {
         <View
           className="w-full rounded-2xl p-6 items-center"
           style={{
-            borderWidth: 2,
-            borderColor: prayerThemeColors.Fajr.active,
+            backgroundColor: isDarkMode
+              ? darkModeColors.backgroundSecondary
+              : lightModeColors.backgroundSecondary,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: isDarkMode ? 0.4 : 0.15,
+            shadowRadius: 12,
+            elevation: 8,
           }}
         >
           <Text
