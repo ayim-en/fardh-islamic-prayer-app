@@ -15,11 +15,15 @@ import { usePrayerTimes } from "@/hooks/usePrayerTimes";
 import { useNavigation } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Text, View } from "react-native";
+import { LayoutChangeEvent, Text, View } from "react-native";
 
 export default function Index() {
   const [currentPage, setCurrentPage] = useState(0);
   const [hasSetInitialPage, setHasSetInitialPage] = useState(false);
+  const [screenHeight, setScreenHeight] = useState(0);
+  const handleScreenLayout = useCallback((e: LayoutChangeEvent) => {
+    setScreenHeight(e.nativeEvent.layout.height);
+  }, []);
   const carouselRef = useRef<PrayerCarouselRef>(null);
   const navigation = useNavigation<any>();
   const { themePrayer, isDarkMode } = useThemeColors();
@@ -121,15 +125,21 @@ export default function Index() {
     );
 
   return (
-    <View className="flex-1" style={{ backgroundColor: bgColor }}>
+    <View
+      className="flex-1"
+      style={{ backgroundColor: bgColor }}
+      onLayout={handleScreenLayout}
+    >
       <StatusBar style="light" />
       <PrayerHeader
         currentPrayer={currentPrayer}
         locationName={locationName}
         timeFormat={prayerSettings.timeFormat}
+        containerHeight={screenHeight}
       />
       <PrayerCarousel
         ref={carouselRef}
+        containerHeight={screenHeight}
         prayerDict={prayerDict}
         sortedDates={sortedDates}
         todayISO={todayISO}

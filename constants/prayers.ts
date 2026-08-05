@@ -1,3 +1,8 @@
+// Fraction of the home tab's available height given to the current-prayer
+// header; the rest goes to the prayer list card. Shared by PrayerHeader and
+// PrayerCarousel so their rounded panel and content offset always line up.
+export const HOME_HEADER_HEIGHT_RATIO = 0.4;
+
 // adjust Sunrise inclusion here
 export const Prayers = [
   "Fajr",

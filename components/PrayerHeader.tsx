@@ -1,4 +1,5 @@
 import {
+  HOME_HEADER_HEIGHT_RATIO,
   darkModeColors,
   lightModeColors,
   prayerBackgrounds,
@@ -12,19 +13,24 @@ import { Dimensions, Text, View } from "react-native";
 import Animated from "react-native-reanimated";
 import { AnimatedCrossfadeImage } from "./AnimatedCrossfadeImage";
 
-const { height } = Dimensions.get("window");
+// Fallback used only before the real container height has been measured
+const FALLBACK_HEIGHT = Dimensions.get("window").height;
 
 interface CurrentPrayerHeaderProps {
   currentPrayer: { prayer: string; time: string } | null;
   locationName: string;
   timeFormat?: TimeFormat;
+  containerHeight?: number;
 }
 
 export const PrayerHeader = ({
   currentPrayer,
   locationName,
   timeFormat = "24h",
+  containerHeight,
 }: CurrentPrayerHeaderProps) => {
+  const panelHeight =
+    (containerHeight || FALLBACK_HEIGHT) * HOME_HEADER_HEIGHT_RATIO;
   const { isDarkMode, themePrayer } = useThemeColors();
   // Get the background image based on theme prayer (if set) or current prayer (null if not loaded yet)
   const displayPrayer = themePrayer || currentPrayer?.prayer;
@@ -41,7 +47,10 @@ export const PrayerHeader = ({
     <>
       <AnimatedCrossfadeImage source={backgroundImage} resizeMode="cover" />
 
-      <View className="absolute left-0 right-0 justify-center items-center pt-28">
+      <View
+        className="absolute top-0 left-0 right-0 justify-center items-center"
+        style={{ height: panelHeight, paddingTop: 24 }}
+      >
         <Text
           className="font-extrabold text-4xl text-white"
           style={{
@@ -94,7 +103,7 @@ export const PrayerHeader = ({
       </View>
       <Animated.View
         className="absolute bottom-0 left-0 right-0 rounded-t-3xl"
-        style={[{ height: height * 0.5 }, animatedBgStyle]}
+        style={[{ height: panelHeight }, animatedBgStyle]}
       />
     </>
   );

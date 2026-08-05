@@ -5,7 +5,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 import { DeviceMotion } from "expo-sensors";
 import React, { useState } from "react";
-import { Image, Text, TouchableOpacity, View } from "react-native";
+import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { AnimatedCrossfadeImage } from "./AnimatedCrossfadeImage";
 
 const WALKTHROUGH_STEPS = [
@@ -137,21 +137,11 @@ export function Walkthrough({ onComplete }: WalkthroughProps) {
         style={{ position: "absolute", width: "100%", height: "100%" }}
         resizeMode="cover"
       />
-      <View className="flex-1 justify-between pt-16">
-        {/* Progress bar */}
-        <View className="mx-20 h-3 bg-white/30 rounded-full overflow-hidden">
-          <View
-            className="h-full bg-white rounded-full"
-            style={{
-              width: `${((activeIndex + 1) / WALKTHROUGH_STEPS.length) * 100}%`,
-            }}
-          />
-        </View>
-
+      <View className="flex-1 pt-16">
         {/* Content */}
         <View className="flex-1 justify-end">
           <View
-            className="rounded-t-3xl px-6 pt-10 pb-12 h-[80%]"
+            className="rounded-t-3xl px-6 pt-10 pb-6 h-[80%]"
             style={{
               backgroundColor:
                 currentStep.id === "Maghrib" || currentStep.id === "Isha"
@@ -159,103 +149,109 @@ export function Walkthrough({ onComplete }: WalkthroughProps) {
                   : "#ffffff",
             }}
           >
-            <Text
-              className={`text-4xl font-bold mb-4 ${currentStep.id === "Fajr" ? "text-right" : "text-left"}`}
-              style={{
-                color:
-                  currentStep.id === "Maghrib" || currentStep.id === "Isha"
-                    ? "#ffffff"
-                    : "#171717",
-              }}
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={{ flexGrow: 1 }}
+              showsVerticalScrollIndicator={false}
             >
-              {currentStep.title}
-            </Text>
-            <Text
-              className="text-base text-left leading-6"
-              style={{
-                color:
-                  currentStep.id === "Maghrib" || currentStep.id === "Isha"
-                    ? "#e0e0e0"
-                    : "#525252",
-              }}
-            >
-              {currentStep.description}
-            </Text>
-            {currentStep.illustration ? (
-              <View className="items-center">
-                <Image
-                  source={currentStep.illustration}
-                  className={`self-center mb-4 ${currentStep.id === "Isha" ? "-mt-4" : currentStep.id === "Fajr" ? "mt-8" : "mt-4"} ${currentStep.id === "Asr" || currentStep.id === "Maghrib" ? "w-[260px] h-[260px]" : currentStep.id === "Isha" ? "w-[280px] h-[280px]" : "w-[328px] h-[328px]"}`}
-                  resizeMode="contain"
-                />
-                {currentStep.id === "Asr" && (
-                  <TouchableOpacity
-                    className="py-3 px-8 rounded-xl self-center"
-                    style={{
-                      backgroundColor:
-                        locationGranted && motionGranted
+              <Text
+                className={`text-4xl font-bold mb-4 ${currentStep.id === "Fajr" ? "text-right" : "text-left"}`}
+                style={{
+                  color:
+                    currentStep.id === "Maghrib" || currentStep.id === "Isha"
+                      ? "#ffffff"
+                      : "#171717",
+                }}
+              >
+                {currentStep.title}
+              </Text>
+              <Text
+                className="text-base text-left leading-6"
+                style={{
+                  color:
+                    currentStep.id === "Maghrib" || currentStep.id === "Isha"
+                      ? "#e0e0e0"
+                      : "#525252",
+                }}
+              >
+                {currentStep.description}
+              </Text>
+              {currentStep.illustration ? (
+                <View className="items-center">
+                  <Image
+                    source={currentStep.illustration}
+                    className={`self-center mb-4 ${currentStep.id === "Isha" ? "-mt-4" : currentStep.id === "Fajr" ? "mt-8" : "mt-4"} ${currentStep.id === "Asr" || currentStep.id === "Maghrib" ? "w-[260px] h-[260px]" : currentStep.id === "Isha" ? "w-[280px] h-[280px]" : "w-[328px] h-[328px]"}`}
+                    resizeMode="contain"
+                  />
+                  {currentStep.id === "Asr" && (
+                    <TouchableOpacity
+                      className="py-3 px-8 rounded-xl self-center"
+                      style={{
+                        backgroundColor:
+                          locationGranted && motionGranted
+                            ? themeColors?.active
+                            : themeColors?.inactive,
+                      }}
+                      onPress={requestLocationAndMotionPermissions}
+                      disabled={locationGranted && motionGranted}
+                    >
+                      <Text className="text-white text-base font-semibold">
+                        {locationGranted && motionGranted
+                          ? "Permissions Enabled ✓"
+                          : "Enable Permissions"}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                  {currentStep.id === "Maghrib" && (
+                    <TouchableOpacity
+                      className="py-3 px-8 rounded-xl self-center"
+                      style={{
+                        backgroundColor: notificationsGranted
                           ? themeColors?.active
                           : themeColors?.inactive,
-                    }}
-                    onPress={requestLocationAndMotionPermissions}
-                    disabled={locationGranted && motionGranted}
-                  >
-                    <Text className="text-white text-base font-semibold">
-                      {locationGranted && motionGranted
-                        ? "Permissions Enabled ✓"
-                        : "Enable Permissions"}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-                {currentStep.id === "Maghrib" && (
-                  <TouchableOpacity
-                    className="py-3 px-8 rounded-xl self-center"
-                    style={{
-                      backgroundColor: notificationsGranted
-                        ? themeColors?.active
-                        : themeColors?.inactive,
-                    }}
-                    onPress={requestNotificationPermission}
-                    disabled={notificationsGranted}
-                  >
-                    <Text className="text-white text-base font-semibold">
-                      {notificationsGranted
-                        ? "Notifications Enabled ✓"
-                        : "Enable Notifications"}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-                {currentStep.id === "Isha" && (
-                  <View className="gap-2 -mt-4 items-center">
-                    {SCHOOLS.map((school) => (
-                      <TouchableOpacity
-                        key={school.id}
-                        className="py-3 px-8 rounded-lg"
-                        style={{
-                          backgroundColor:
-                            selectedSchool === school.id
-                              ? themeColors?.active
-                              : "transparent",
-                        }}
-                        onPress={async () => {
-                          setSelectedSchool(school.id);
-                          await saveSchool(school.id);
-                        }}
-                      >
-                        <Text
-                          className={`text-base text-center ${selectedSchool === school.id ? "text-white" : "text-neutral-300"}`}
+                      }}
+                      onPress={requestNotificationPermission}
+                      disabled={notificationsGranted}
+                    >
+                      <Text className="text-white text-base font-semibold">
+                        {notificationsGranted
+                          ? "Notifications Enabled ✓"
+                          : "Enable Notifications"}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                  {currentStep.id === "Isha" && (
+                    <View className="gap-2 -mt-4 items-center">
+                      {SCHOOLS.map((school) => (
+                        <TouchableOpacity
+                          key={school.id}
+                          className="py-3 px-8 rounded-lg"
+                          style={{
+                            backgroundColor:
+                              selectedSchool === school.id
+                                ? themeColors?.active
+                                : "transparent",
+                          }}
+                          onPress={async () => {
+                            setSelectedSchool(school.id);
+                            await saveSchool(school.id);
+                          }}
                         >
-                          {school.name} - {school.description}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-              </View>
-            ) : null}
+                          <Text
+                            className={`text-base text-center ${selectedSchool === school.id ? "text-white" : "text-neutral-300"}`}
+                          >
+                            {school.name} - {school.description}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              ) : null}
+            </ScrollView>
 
             {/* Navigation buttons */}
-            <View className="flex-row gap-3 mt-auto">
+            <View className="flex-row gap-3 pt-4">
               {!isFirstStep && (
                 <TouchableOpacity
                   className="flex-1 py-4 rounded-xl items-center"

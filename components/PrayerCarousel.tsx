@@ -1,5 +1,6 @@
 import { CarouselDateFormat } from "@/constants/calendarSettings";
 import {
+  HOME_HEADER_HEIGHT_RATIO,
   Prayers,
   darkModeColors,
   lightModeColors,
@@ -18,8 +19,22 @@ import {
   formatHijriDateShort,
   formatTimeWithPreference,
 } from "@/utils/prayerHelpers";
-import React, { forwardRef, useImperativeHandle, useRef } from "react";
-import { Dimensions, Pressable, Text, Vibration, View } from "react-native";
+import React, {
+  forwardRef,
+  useCallback,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
+import {
+  Dimensions,
+  LayoutChangeEvent,
+  Pressable,
+  ScrollView,
+  Text,
+  Vibration,
+  View,
+} from "react-native";
 import Animated from "react-native-reanimated";
 import { Carousel } from "react-native-ui-lib";
 import { AnimatedTintIcon } from "./AnimatedTintIcon";
@@ -39,9 +54,12 @@ const VIBRATION_PATTERNS = {
 };
 
 const { width, height } = Dimensions.get("window");
-const pageHeight = height * 0.5;
+const DEFAULT_PAGE_HEIGHT = height * 0.5;
+const FALLBACK_CONTAINER_HEIGHT = height;
 const pageWidth = width * 0.85;
 const itemSpacing = 10;
+// Vertical padding on the carousel's wrapping container (pt-8 + pb-2)
+const CONTAINER_VERTICAL_PADDING = 40;
 
 interface PrayerCarouselProps {
   prayerDict: PrayerDict;
@@ -57,6 +75,7 @@ interface PrayerCarouselProps {
   currentPrayer: string | null;
   dateFormat?: CarouselDateFormat;
   timeFormat?: TimeFormat;
+  containerHeight?: number;
 }
 
 export type PrayerCarouselRef = {
@@ -82,12 +101,31 @@ export const PrayerCarousel = forwardRef<
       currentPrayer,
       dateFormat = "gregorian",
       timeFormat = "24h",
+      containerHeight,
     },
     ref
   ) => {
     type CarouselHandle = React.ComponentRef<typeof Carousel>;
     const carouselRef = useRef<CarouselHandle | null>(null);
     const { isDarkMode } = useThemeColors();
+    const [pageHeight, setPageHeight] = useState(DEFAULT_PAGE_HEIGHT);
+
+    // Same ratio PrayerHeader uses for its rounded panel, so the two always
+    // line up regardless of the actual screen height.
+    const headerOffset =
+      (containerHeight || FALLBACK_CONTAINER_HEIGHT) *
+      HOME_HEADER_HEIGHT_RATIO;
+
+    // Size the carousel off the actual available space instead of a guessed
+    // fraction of window height, which can be much shorter than expected
+    // (e.g. iPhone-compatibility mode on iPad).
+    const handleContainerLayout = useCallback((e: LayoutChangeEvent) => {
+      const measuredHeight =
+        e.nativeEvent.layout.height - CONTAINER_VERTICAL_PADDING;
+      if (measuredHeight > 0) {
+        setPageHeight(measuredHeight);
+      }
+    }, []);
 
     useImperativeHandle(ref, () => ({
       goToPage: (page, animated = true) =>
@@ -114,8 +152,9 @@ export const PrayerCarousel = forwardRef<
 
     return (
       <Animated.View
-        className="flex-1 pt-8 pb-2 items-center mt-[22rem] rounded-t-3xl"
-        style={animatedBgStyle}
+        className="flex-1 pt-8 pb-2 items-center rounded-t-3xl"
+        style={[animatedBgStyle, { marginTop: headerOffset }]}
+        onLayout={handleContainerLayout}
       >
         <View
           className="relative"
@@ -170,11 +209,18 @@ export const PrayerCarousel = forwardRef<
                     </View>
                   </View>
 
-                  <View className="flex-1 justify-around">
+                  <ScrollView
+                    style={{ flex: 1 }}
+                    contentContainerStyle={{
+                      flexGrow: 1,
+                      justifyContent: "space-around",
+                    }}
+                    showsVerticalScrollIndicator={false}
+                  >
                     {Prayers.map((prayer) => (
                       <View
                         key={prayer}
-                        className="flex-row justify-between items-center py-5"
+                        className="flex-row justify-between items-center py-2"
                       >
                         <View className="flex-row items-center gap-4">
                           <AnimatedTintIcon
@@ -235,7 +281,7 @@ export const PrayerCarousel = forwardRef<
                         </View>
                       </View>
                     ))}
-                  </View>
+                  </ScrollView>
                 </View>
               );
             })}
