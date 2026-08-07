@@ -1,9 +1,6 @@
 import { FUTURE_MONTHS, PAST_MONTHS } from "@/constants/calendar";
-import { INCLUDED_HOLIDAYS } from "@/constants/holidays";
+import { INCLUDED_IMPORTANT_DATES, MANUAL_KEY_DATES } from "@/constants/importantDates";
 import { CalendarDay } from "@/prayer-api/islamicCalendarAPI";
-
-// Label used for the voluntary first six days of Shawwal
-const SHAWWAL_SIX_DAYS = "Six Days of Shawwal";
 
 // Convert DD-MM-YYYY format to YYYY-MM-DD format
 export const convertDDMMYYYYToISO = (ddmmyyyyDate: string): string => {
@@ -40,45 +37,50 @@ export const getMonthsForCurrentYear = (): { month: number; year: number }[] => 
   return monthsToFetch;
 };
 
-// Check if a calendar day has any included holidays
-export const hasIncludedHoliday = (day: CalendarDay): boolean => {
-  const allHolidays = [...day.hijri.holidays, ...day.hijri.adjustedHolidays];
-  if (allHolidays.some((holiday) => INCLUDED_HOLIDAYS.includes(holiday))) {
+// Check if a calendar day has any included important dates
+export const hasIncludedImportantDate = (day: CalendarDay): boolean => {
+  const allImportantDates = [...day.hijri.holidays, ...day.hijri.adjustedHolidays];
+  if (allImportantDates.some((importantDate) => INCLUDED_IMPORTANT_DATES.includes(importantDate))) {
     return true;
   }
 
-  // Manually mark the first six days of Shawwal as holidays (not provided by API)
+  // Manually mark historical events as key dates (not provided by API)
   const [dayNumStr, monthStr] = day.hijri.date.split("-");
   const dayNum = parseInt(dayNumStr, 10);
-  return monthStr === "10" && dayNum >= 1 && dayNum <= 6;
+  return MANUAL_KEY_DATES.some(
+    (d) => d.month === monthStr && d.day === dayNum
+  );
 };
 
-// Filter included holidays from a calendar day
-export const getIncludedHolidaysFromDay = (day: CalendarDay): string[] => {
-  const allHolidays = [...day.hijri.holidays, ...day.hijri.adjustedHolidays];
-  const included = allHolidays.filter((h) => INCLUDED_HOLIDAYS.includes(h));
+// Filter included important dates from a calendar day
+export const getIncludedImportantDatesFromDay = (day: CalendarDay): string[] => {
+  const allImportantDates = [...day.hijri.holidays, ...day.hijri.adjustedHolidays];
+  const included = allImportantDates.filter((d) => INCLUDED_IMPORTANT_DATES.includes(d));
 
-  // Add manual Shawwal entries when applicable
+  // Add manual historical event entries
   const [dayNumStr, monthStr] = day.hijri.date.split("-");
   const dayNum = parseInt(dayNumStr, 10);
-  if (monthStr === "10" && dayNum >= 2 && dayNum <= 6) {
-    included.push(SHAWWAL_SIX_DAYS);
+  const manualMatch = MANUAL_KEY_DATES.find(
+    (d) => d.month === monthStr && d.day === dayNum
+  );
+  if (manualMatch) {
+    included.push(manualMatch.label);
   }
 
   return included;
 };
 
-// Find the next upcoming holiday from a list of calendar days
-export const findNextUpcomingHoliday = (days: CalendarDay[]): CalendarDay | null => {
+// Find the next upcoming important date from a list of calendar days
+export const findNextUpcomingImportantDate = (days: CalendarDay[]): CalendarDay | null => {
   const todayISO = getTodayISO();
 
-  const upcomingHolidays = days.filter(day => {
+  const upcomingImportantDates = days.filter(day => {
     const dayDate = convertDDMMYYYYToISO(day.gregorian.date);
     if (dayDate < todayISO) return false;
-    return hasIncludedHoliday(day);
+    return hasIncludedImportantDate(day);
   });
 
-  return upcomingHolidays.length > 0 ? upcomingHolidays[0] : null;
+  return upcomingImportantDates.length > 0 ? upcomingImportantDates[0] : null;
 };
 
 // A single day row in the vertical calendar list

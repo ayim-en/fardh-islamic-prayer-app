@@ -64,7 +64,7 @@ export const PrayerHeader = ({
         >
           {currentPrayer
             ? currentPrayer.prayer === "Sunrise"
-              ? "Current: Sunrise"
+              ? "Currently Sunrise"
               : `Current Prayer: ${currentPrayer.prayer}`
             : "Loading prayer times..."}
         </Text>

@@ -30,7 +30,7 @@ const HEADER_HEIGHT = 44;
 interface CalendarCardProps {
   selectedDate: string;
   onDayPress: (day: { dateString: string }) => void;
-  holidayMarks: Record<string, any>;
+  importantDateMarks: Record<string, any>;
   colors: { active: string; inactive: string };
   isDarkMode?: boolean;
 }
@@ -46,7 +46,7 @@ interface DayRowProps {
   dayOfWeek: string;
   isSelected: boolean;
   isToday: boolean;
-  marking?: { marked?: boolean; holidays?: string[] };
+  marking?: { marked?: boolean; importantDates?: string[] };
   onDayPress: (day: { dateString: string }) => void;
   activeColor: string;
   disabledTextColor: string;
@@ -65,7 +65,7 @@ const DayRow = memo(function DayRow({
   disabledTextColor,
   animatedDayTextStyle,
 }: DayRowProps) {
-  const holidays = marking?.holidays ?? [];
+  const importantDates = marking?.importantDates ?? [];
 
   return (
     <Pressable
@@ -106,13 +106,13 @@ const DayRow = memo(function DayRow({
         </Animated.Text>
       </View>
       <View className="flex-1 flex-row items-center gap-2">
-        {holidays.length > 0 && (
+        {importantDates.length > 0 && (
           <Text
             className="flex-1 text-lg font-semibold ml-3"
             numberOfLines={1}
             style={{ color: activeColor }}
           >
-            {holidays.join(" · ")}
+            {importantDates.join(" · ")}
           </Text>
         )}
       </View>
@@ -122,7 +122,7 @@ const DayRow = memo(function DayRow({
 
 export const CalendarCard = forwardRef<CalendarCardRef, CalendarCardProps>(
   (
-    { selectedDate, onDayPress, holidayMarks, colors, isDarkMode = false },
+    { selectedDate, onDayPress, importantDateMarks, colors, isDarkMode = false },
     ref,
   ) => {
     const listRef =
@@ -212,7 +212,7 @@ export const CalendarCard = forwardRef<CalendarCardRef, CalendarCardProps>(
           dayOfWeek={item.dayOfWeek}
           isSelected={item.dateString === selectedDate}
           isToday={item.dateString === todayISO}
-          marking={holidayMarks[item.dateString]}
+          marking={importantDateMarks[item.dateString]}
           onDayPress={onDayPress}
           activeColor={colors.active}
           disabledTextColor={disabledTextColor}
@@ -222,7 +222,7 @@ export const CalendarCard = forwardRef<CalendarCardRef, CalendarCardProps>(
       [
         selectedDate,
         todayISO,
-        holidayMarks,
+        importantDateMarks,
         onDayPress,
         colors.active,
         disabledTextColor,
@@ -267,7 +267,7 @@ export const CalendarCard = forwardRef<CalendarCardRef, CalendarCardProps>(
           renderSectionHeader={renderSectionHeader}
           getItemLayout={getItemLayout}
           contentOffset={{ x: 0, y: initialScrollOffset }}
-          extraData={[selectedDate, holidayMarks]}
+          extraData={[selectedDate, importantDateMarks]}
           stickySectionHeadersEnabled
           showsVerticalScrollIndicator={false}
           initialNumToRender={24}

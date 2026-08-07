@@ -1,8 +1,8 @@
-import { INCLUDED_HOLIDAYS } from "@/constants/holidays";
+import { INCLUDED_IMPORTANT_DATES } from "@/constants/importantDates";
 import { cacheCalendar, getCachedCalendar } from "@/utils/cacheHelpers";
 import {
-    findNextUpcomingHoliday,
-    getIncludedHolidaysFromDay,
+    findNextUpcomingImportantDate,
+    getIncludedImportantDatesFromDay,
     getMonthsForCurrentYear,
 } from "@/utils/calendarHelpers";
 
@@ -10,15 +10,15 @@ const delay = (ms: number): Promise<void> =>
     new Promise((resolve) => setTimeout(resolve, ms));
 
 // Calendar type definitions
-export interface HolidayData {
+export interface ImportantDateData {
     year: number;
-    holidays: string[];
+    importantDates: string[];
 }
 
-export interface HolidayResponse {
+export interface ImportantDateResponse {
     code: number;
     status: string;
-    data: HolidayData;
+    data: ImportantDateData;
 }
 
 export interface CalendarDay {
@@ -44,7 +44,7 @@ export interface CalendarResponse {
     data: CalendarDay[];
 }
 
-export interface NextHijriHolidayResponse {
+export interface NextHijriImportantDateResponse {
     code: number;
     status: string;
     data: {
@@ -60,7 +60,7 @@ export interface NextHijriHolidayResponse {
     };
 }
 
-export type NextHijriHolidayData = NextHijriHolidayResponse["data"];
+export type NextHijriImportantDateData = NextHijriImportantDateResponse["data"];
 
 export type CalendarMethod = "HJCoSA" | "UAQ" | "DIYANET" | "MATHEMATICAL";
 
@@ -71,33 +71,33 @@ export interface CalendarOptions {
 
 const API_BASE_URL = "https://api.aladhan.com/v1";
 
-// Fetch Islamic holidays for a specific Hijri year
-export const fetchHijriHolidaysByYear = async (year: number): Promise<HolidayData> => {
+// Fetch Islamic important dates for a specific Hijri year
+export const fetchHijriImportantDatesByYear = async (year: number): Promise<ImportantDateData> => {
     try {
         const url = `${API_BASE_URL}/islamicHolidaysByHijriYear/${year}`;
         const response = await fetch(url);
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
-        const json: HolidayResponse = await response.json();
-        
+
+        const json: ImportantDateResponse = await response.json();
+
         if (!json || !json.data) {
             throw new Error("Invalid API response structure");
         }
-        
-        // Filter holidays to only include those in INCLUDED_HOLIDAYS
-        const filteredHolidays = json.data.holidays.filter(holiday => 
-            INCLUDED_HOLIDAYS.includes(holiday)
+
+        // Filter important dates to only include those in INCLUDED_IMPORTANT_DATES
+        const filteredImportantDates = json.data.importantDates.filter(importantDate =>
+            INCLUDED_IMPORTANT_DATES.includes(importantDate)
         );
-        
+
         return {
             ...json.data,
-            holidays: filteredHolidays
+            importantDates: filteredImportantDates
         };
     } catch (error) {
-        console.error("Error fetching Hijri holidays:", error);
+        console.error("Error fetching Hijri important dates:", error);
         throw error;
     }
 };
@@ -115,7 +115,7 @@ export const fetchHijriCalendar = async (
         params.append("calendarMethod", options.calendarMethod);
     }
     // Adjustment only works with MATHEMATICAL method
-    // Negate the value: user expects +1 = holiday 1 day later, but API works inversely
+    // Negate the value: user expects +1 = important date 1 day later, but API works inversely
     if (
         options?.adjustment !== undefined &&
         options.adjustment !== 0 &&
@@ -130,17 +130,17 @@ export const fetchHijriCalendar = async (
     try {
         console.log(`[fetchHijriCalendar] Fetching ${month}/${year}...`);
         const response = await fetch(url);
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const json: CalendarResponse = await response.json();
-        
+
         if (!json || !json.data) {
             throw new Error("Invalid API response structure");
         }
-        
+
         console.log(`[fetchHijriCalendar] ${month}/${year} - Got ${json.data.length} days`);
         return json.data;
     } catch (error) {
@@ -149,11 +149,11 @@ export const fetchHijriCalendar = async (
     }
 };
 
-// Fetch the next included Islamic holiday from the calendar
+// Fetch the next included Islamic important date from the calendar
 
-export const fetchNextIncludedHijriHoliday = async (
+export const fetchNextIncludedHijriImportantDate = async (
     options?: CalendarOptions
-): Promise<NextHijriHolidayData | null> => {
+): Promise<NextHijriImportantDateData | null> => {
     try {
         // Try to get cached calendar data first
         let allDays = await getCachedCalendar();
@@ -170,18 +170,18 @@ export const fetchNextIncludedHijriHoliday = async (
                     const calendar = await fetchHijriCalendar(month, year, options);
                     calendars.push(calendar);
                 } catch (error) {
-                    console.warn(`[fetchNextIncludedHijriHoliday] Skipping month ${month}/${year} due to error:`, error);
+                    console.warn(`[fetchNextIncludedHijriImportantDate] Skipping month ${month}/${year} due to error:`, error);
                     // Continue with other months
                 }
                 // Add small delay between requests to avoid rate limiting
                 await delay(100);
             }
-            
+
             if (calendars.length === 0) {
-                console.error("[fetchNextIncludedHijriHoliday] All months failed to load");
+                console.error("[fetchNextIncludedHijriImportantDate] All months failed to load");
                 return null;
             }
-            
+
             allDays = calendars.flat();
 
             // Only cache if we got most months (at least 20 of 25)
@@ -190,42 +190,42 @@ export const fetchNextIncludedHijriHoliday = async (
             }
         }
 
-        // Find the next upcoming holiday
-        const nextDay = findNextUpcomingHoliday(allDays);
-        
+        // Find the next upcoming important date
+        const nextDay = findNextUpcomingImportantDate(allDays);
+
         if (nextDay) {
-            const includedHolidays = getIncludedHolidaysFromDay(nextDay);
+            const includedImportantDates = getIncludedImportantDatesFromDay(nextDay);
 
             return {
                 gregorian: {
                     date: nextDay.gregorian.date,
-                    holidays: includedHolidays
+                    holidays: includedImportantDates
                 },
                 hijri: {
-                    holidays: includedHolidays
+                    holidays: includedImportantDates
                 }
             };
         }
 
         return null;
     } catch (error) {
-        console.error("Error fetching next included Hijri holiday:", error);
+        console.error("Error fetching next included Hijri important date:", error);
         throw error;
     }
 };
 
-// Fetch the next upcoming Hijri holiday directly from API
+// Fetch the next upcoming Hijri important date directly from API
 
-export const fetchNextHijriHoliday = async (
+export const fetchNextHijriImportantDate = async (
     options?: CalendarOptions
-): Promise<NextHijriHolidayData> => {
+): Promise<NextHijriImportantDateData> => {
     const params = new URLSearchParams();
 
     if (options?.calendarMethod) {
         params.append("calendarMethod", options.calendarMethod);
     }
     // Adjustment only works with MATHEMATICAL method
-    // Negate the value: user expects +1 = holiday 1 day later, but API works inversely
+    // Negate the value: user expects +1 = important date 1 day later, but API works inversely
     if (
         options?.adjustment !== undefined &&
         options.adjustment !== 0 &&
@@ -239,47 +239,47 @@ export const fetchNextHijriHoliday = async (
 
     try {
         const response = await fetch(url);
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
-        const json: NextHijriHolidayResponse = await response.json();
-        
+
+        const json: NextHijriImportantDateResponse = await response.json();
+
         if (!json || !json.data) {
             throw new Error("Invalid API response structure");
         }
-        
-        // Filter holidays to only include those in INCLUDED_HOLIDAYS
+
+        // Filter important dates to only include those in INCLUDED_IMPORTANT_DATES
         const filteredData = { ...json.data };
-        
+
         if (filteredData.gregorian.holidays) {
             filteredData.gregorian.holidays = filteredData.gregorian.holidays.filter(
-                holiday => INCLUDED_HOLIDAYS.includes(holiday)
+                importantDate => INCLUDED_IMPORTANT_DATES.includes(importantDate)
             );
         }
-        
+
         if (filteredData.gregorian.adjustedHolidays) {
             filteredData.gregorian.adjustedHolidays = filteredData.gregorian.adjustedHolidays.filter(
-                holiday => INCLUDED_HOLIDAYS.includes(holiday)
+                importantDate => INCLUDED_IMPORTANT_DATES.includes(importantDate)
             );
         }
-        
+
         if (filteredData.hijri?.holidays) {
             filteredData.hijri.holidays = filteredData.hijri.holidays.filter(
-                holiday => INCLUDED_HOLIDAYS.includes(holiday)
+                importantDate => INCLUDED_IMPORTANT_DATES.includes(importantDate)
             );
         }
-        
+
         if (filteredData.hijri?.adjustedHolidays) {
             filteredData.hijri.adjustedHolidays = filteredData.hijri.adjustedHolidays.filter(
-                holiday => INCLUDED_HOLIDAYS.includes(holiday)
+                importantDate => INCLUDED_IMPORTANT_DATES.includes(importantDate)
             );
         }
-        
+
         return filteredData;
     } catch (error) {
-        console.error("Error fetching next Hijri holiday:", error);
+        console.error("Error fetching next Hijri important date:", error);
         throw error;
     }
 };

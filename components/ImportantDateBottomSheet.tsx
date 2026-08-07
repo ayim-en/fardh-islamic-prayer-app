@@ -1,4 +1,4 @@
-import { HOLIDAY_DESCRIPTIONS } from "@/constants/holidays";
+import { IMPORTANT_DATE_DESCRIPTIONS } from "@/constants/importantDates";
 import { darkModeColors, lightModeColors } from "@/constants/prayers";
 import React, { useEffect, useRef } from "react";
 import {
@@ -17,21 +17,21 @@ const ANIMATION_DURATION_IN = 250;
 const ANIMATION_DURATION_OUT = 200;
 const OVERLAY_OPACITY = "rgba(0,0,0,0.35)";
 
-interface HolidayBottomSheetProps {
+interface ImportantDateBottomSheetProps {
   visible: boolean;
-  holidays: string[];
+  importantDates: string[];
   isDarkMode: boolean;
   colors: { active: string; inactive: string };
   onClose: () => void;
 }
 
-export function HolidayBottomSheet({
+export function ImportantDateBottomSheet({
   visible,
-  holidays,
+  importantDates,
   isDarkMode,
   colors,
   onClose,
-}: HolidayBottomSheetProps) {
+}: ImportantDateBottomSheetProps) {
   // Colors based on dark mode
   const themeColors = isDarkMode ? darkModeColors : lightModeColors;
 
@@ -75,9 +75,9 @@ export function HolidayBottomSheet({
     }, ANIMATION_DURATION_OUT);
   };
 
-  // Show holiday name as title for single holiday, or generic title for multiple
+  // Show the date's name as title for a single date, or generic title for multiple
   const title =
-    holidays.length > 1 ? "Holiday Details" : holidays[0] || "Holiday";
+    importantDates.length > 1 ? "Key Date Details" : importantDates[0] || "Key Date";
 
   return (
     <Modal
@@ -125,9 +125,9 @@ export function HolidayBottomSheet({
                   paddingBottom: 12,
                 }}
               >
-                {holidays.map((name: string, idx: number) => (
+                {importantDates.map((name: string, idx: number) => (
                   <View key={`${name}-${idx}`} className="mb-6">
-                    {holidays.length > 1 && (
+                    {importantDates.length > 1 && (
                       <Text
                         className="text-lg font-semibold mb-1"
                         style={{ color: themeColors.sectionTitle }}
@@ -140,7 +140,7 @@ export function HolidayBottomSheet({
                       className="text-base"
                       style={{ color: themeColors.text }}
                     >
-                      {HOLIDAY_DESCRIPTIONS[name] ||
+                      {IMPORTANT_DATE_DESCRIPTIONS[name] ||
                         "Description not available."}
                     </Text>
                   </View>
@@ -152,7 +152,7 @@ export function HolidayBottomSheet({
                 <Pressable
                   onPress={closeWithAnimation}
                   accessibilityRole="button"
-                  accessibilityLabel="Close holiday details"
+                  accessibilityLabel="Close key date details"
                 >
                   <Text
                     className="text-center font-semibold"

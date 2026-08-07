@@ -1,5 +1,5 @@
 import { CalendarCard, CalendarCardRef } from "@/components/CalendarCard";
-import { HolidayBottomSheet } from "@/components/HolidayBottomSheet";
+import { ImportantDateBottomSheet } from "@/components/ImportantDateBottomSheet";
 import { darkModeColors, lightModeColors } from "@/constants/prayers";
 import { useCalendarSettings } from "@/context/CalendarSettingsContext";
 import { useThemeColors } from "@/context/ThemeContext";
@@ -9,15 +9,15 @@ import {
 } from "@/hooks/useAnimatedColor";
 import { useLocation } from "@/hooks/useLocation";
 import {
-  NextHijriHolidayData,
-  fetchNextIncludedHijriHoliday,
+  NextHijriImportantDateData,
+  fetchNextIncludedHijriImportantDate,
 } from "@/prayer-api/islamicCalendarAPI";
 import { getCachedCalendar } from "@/utils/cacheHelpers";
 import {
   convertDDMMYYYYToISO,
-  getIncludedHolidaysFromDay,
+  getIncludedImportantDatesFromDay,
   getTodayISO,
-  hasIncludedHoliday,
+  hasIncludedImportantDate,
 } from "@/utils/calendarHelpers";
 import { useNavigation } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -33,11 +33,13 @@ import Reanimated from "react-native-reanimated";
 
 export default function CalendarScreen() {
   const [selectedDate, setSelectedDate] = useState(getTodayISO());
-  const [nextHoliday, setNextHoliday] = useState<NextHijriHolidayData | null>(
-    null,
+  const [nextImportantDate, setNextImportantDate] =
+    useState<NextHijriImportantDateData | null>(null);
+  const [isImportantDateSheetOpen, setIsImportantDateSheetOpen] =
+    useState(false);
+  const [sheetImportantDates, setSheetImportantDates] = useState<string[]>(
+    [],
   );
-  const [isHolidaySheetOpen, setIsHolidaySheetOpen] = useState(false);
-  const [sheetHolidays, setSheetHolidays] = useState<string[]>([]);
   const [isReady, setIsReady] = useState(false);
   const { colors, isDarkMode } = useThemeColors();
   const { settings: calendarSettings, loading: calendarSettingsLoading } =
@@ -49,7 +51,9 @@ export default function CalendarScreen() {
   const animatedActiveTextStyle = useAnimatedTextColor(colors.active);
   const animatedSecondaryTextStyle = useAnimatedTextColor(colors.inactive);
   const { error: locationError } = useLocation();
-  const [holidayMarks, setHolidayMarks] = useState<Record<string, any>>({});
+  const [importantDateMarks, setImportantDateMarks] = useState<
+    Record<string, any>
+  >({});
 
   // Ref and navigation for scrolling to today on tab press
   const calendarRef = useRef<CalendarCardRef>(null);
@@ -83,94 +87,101 @@ export default function CalendarScreen() {
 
     let isActive = true;
 
-    const loadHoliday = async () => {
+    const loadImportantDate = async () => {
       try {
-        const data = await fetchNextIncludedHijriHoliday({
+        const data = await fetchNextIncludedHijriImportantDate({
           calendarMethod: calendarSettings.calendarMethod,
           adjustment: calendarSettings.adjustment,
         });
         if (isActive) {
-          setNextHoliday(data);
+          setNextImportantDate(data);
         }
-        // After fetching next holiday, cached calendar should be available.
+        // After fetching next important date, cached calendar should be available.
         const allDays = await getCachedCalendar();
         if (isActive && allDays) {
           const marks: Record<string, any> = {};
           for (const day of allDays) {
-            if (hasIncludedHoliday(day)) {
+            if (hasIncludedImportantDate(day)) {
               const iso = convertDDMMYYYYToISO(day.gregorian.date);
-              const holidays = getIncludedHolidaysFromDay(day);
-              // Store both marked status and holiday names
-              marks[iso] = { ...(marks[iso] || {}), marked: true, holidays };
+              const importantDates = getIncludedImportantDatesFromDay(day);
+              // Store both marked status and important date names
+              marks[iso] = {
+                ...(marks[iso] || {}),
+                marked: true,
+                importantDates,
+              };
             }
           }
-          setHolidayMarks(marks);
+          setImportantDateMarks(marks);
         }
       } catch (error) {
-        console.error("Failed to load next Hijri holiday", error);
+        console.error("Failed to load next Hijri important date", error);
       }
     };
 
-    loadHoliday();
+    loadImportantDate();
 
     return () => {
       isActive = false;
     };
   }, [calendarSettings, calendarSettingsLoading]);
 
-  // Select the tapped day and pop up the holiday sheet when it has holidays
+  // Select the tapped day and pop up the important date sheet when it has any
   const handleDayPress = useCallback(
     (day: { dateString: string }) => {
       setSelectedDate(day.dateString);
-      const holidays = holidayMarks[day.dateString]?.holidays;
-      if (holidays?.length) {
-        setSheetHolidays(holidays);
-        setIsHolidaySheetOpen(true);
+      const importantDates = importantDateMarks[day.dateString]?.importantDates;
+      if (importantDates?.length) {
+        setSheetImportantDates(importantDates);
+        setIsImportantDateSheetOpen(true);
       }
     },
-    [holidayMarks],
+    [importantDateMarks],
   );
 
-  // Upcoming/current holiday shown in the fixed banner above the list
-  const nextHolidayName =
-    nextHoliday?.hijri?.holidays?.[0] || nextHoliday?.gregorian?.holidays?.[0];
-  const hasNextHoliday = nextHolidayName !== undefined;
-  const isHolidayToday =
-    hasNextHoliday &&
-    nextHoliday?.gregorian?.date != null &&
-    convertDDMMYYYYToISO(nextHoliday.gregorian.date) === getTodayISO();
-  const nextHolidayDateLabel = useMemo(() => {
-    if (!nextHoliday?.gregorian?.date) return null;
-    const [day, month, year] = nextHoliday.gregorian.date
+  // Upcoming/current important date shown in the fixed banner above the list
+  const nextImportantDateName =
+    nextImportantDate?.hijri?.holidays?.[0] ||
+    nextImportantDate?.gregorian?.holidays?.[0];
+  const hasNextImportantDate = nextImportantDateName !== undefined;
+  const isImportantDateToday =
+    hasNextImportantDate &&
+    nextImportantDate?.gregorian?.date != null &&
+    convertDDMMYYYYToISO(nextImportantDate.gregorian.date) === getTodayISO();
+  const nextImportantDateLabel = useMemo(() => {
+    if (!nextImportantDate?.gregorian?.date) return null;
+    const [day, month, year] = nextImportantDate.gregorian.date
       .split("-")
       .map(Number);
     return new Date(year, month - 1, day).toLocaleDateString(undefined, {
       month: "long",
       day: "numeric",
     });
-  }, [nextHoliday]);
+  }, [nextImportantDate]);
 
   const secondaryTextColor = isDarkMode
     ? darkModeColors.textSecondary
     : lightModeColors.textSecondary;
 
-  // Banner interactions: name opens the holiday sheet, date jumps the list
-  const nextHolidayISO = nextHoliday?.gregorian?.date
-    ? convertDDMMYYYYToISO(nextHoliday.gregorian.date)
+  // Banner interactions: name opens the important date sheet, date jumps the list
+  const nextImportantDateISO = nextImportantDate?.gregorian?.date
+    ? convertDDMMYYYYToISO(nextImportantDate.gregorian.date)
     : null;
 
-  const openNextHolidaySheet = () => {
-    if (!nextHolidayName) return;
-    const holidays = (nextHolidayISO &&
-      holidayMarks[nextHolidayISO]?.holidays) || [nextHolidayName];
-    setSheetHolidays(holidays);
-    setIsHolidaySheetOpen(true);
+  const openNextImportantDateSheet = () => {
+    if (!nextImportantDateName) return;
+    const importantDates = (nextImportantDateISO &&
+      importantDateMarks[nextImportantDateISO]?.importantDates) || [
+      nextImportantDateName,
+    ];
+    setSheetImportantDates(importantDates);
+    setIsImportantDateSheetOpen(true);
   };
 
-  const jumpToNextHoliday = () => {
-    if (!nextHolidayISO) return;
-    setSelectedDate(nextHolidayISO);
-    calendarRef.current?.scrollToDate(nextHolidayISO);
+  const jumpToNextImportantDate = () => {
+    if (!nextImportantDateISO) return;
+    setSelectedDate(nextImportantDateISO);
+    calendarRef.current?.scrollToDate(nextImportantDateISO);
   };
 
   const isLocationError = locationError?.toLowerCase().includes("location");
@@ -227,18 +238,18 @@ export default function CalendarScreen() {
           className="text-base font-semibold uppercase"
           style={{ color: secondaryTextColor }}
         >
-          {nextHoliday
-            ? hasNextHoliday
-              ? isHolidayToday
-                ? "Current Holiday"
-                : "Upcoming Holiday"
-              : "No Upcoming Holiday"
-            : "Loading Holidays..."}
+          {nextImportantDate
+            ? hasNextImportantDate
+              ? isImportantDateToday
+                ? "Current Key Date"
+                : "Upcoming Key Date"
+              : "No Upcoming Key Date"
+            : "Loading Key Dates..."}
         </Text>
-        {hasNextHoliday && (
+        {hasNextImportantDate && (
           <View className="flex-row items-end justify-between gap-2 mt-1">
             <Pressable
-              onPress={openNextHolidaySheet}
+              onPress={openNextImportantDateSheet}
               className="flex-shrink"
               hitSlop={8}
             >
@@ -247,16 +258,16 @@ export default function CalendarScreen() {
                 numberOfLines={1}
                 style={animatedActiveTextStyle}
               >
-                {nextHolidayName}
+                {nextImportantDateName}
               </Reanimated.Text>
             </Pressable>
-            {nextHolidayDateLabel && !isHolidayToday && (
-              <Pressable onPress={jumpToNextHoliday} hitSlop={8}>
+            {nextImportantDateLabel && !isImportantDateToday && (
+              <Pressable onPress={jumpToNextImportantDate} hitSlop={8}>
                 <Reanimated.Text
                   className="text-2xl font-semibold"
                   style={animatedSecondaryTextStyle}
                 >
-                  {nextHolidayDateLabel}
+                  {nextImportantDateLabel}
                 </Reanimated.Text>
               </Pressable>
             )}
@@ -270,7 +281,7 @@ export default function CalendarScreen() {
               ref={calendarRef}
               selectedDate={selectedDate}
               onDayPress={handleDayPress}
-              holidayMarks={holidayMarks}
+              importantDateMarks={importantDateMarks}
               colors={colors}
               isDarkMode={isDarkMode}
             />
@@ -284,12 +295,12 @@ export default function CalendarScreen() {
       </View>
 
       {/* Bottom Sheet Modal */}
-      <HolidayBottomSheet
-        visible={isHolidaySheetOpen}
-        holidays={sheetHolidays}
+      <ImportantDateBottomSheet
+        visible={isImportantDateSheetOpen}
+        importantDates={sheetImportantDates}
         isDarkMode={isDarkMode}
         colors={colors}
-        onClose={() => setIsHolidaySheetOpen(false)}
+        onClose={() => setIsImportantDateSheetOpen(false)}
       />
       <Reanimated.View
         className="absolute bottom-0 left-0 right-0 rounded-t-3xl"
