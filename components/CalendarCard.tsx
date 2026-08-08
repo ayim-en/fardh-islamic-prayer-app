@@ -122,7 +122,13 @@ const DayRow = memo(function DayRow({
 
 export const CalendarCard = forwardRef<CalendarCardRef, CalendarCardProps>(
   (
-    { selectedDate, onDayPress, importantDateMarks, colors, isDarkMode = false },
+    {
+      selectedDate,
+      onDayPress,
+      importantDateMarks,
+      colors,
+      isDarkMode = false,
+    },
     ref,
   ) => {
     const listRef =
@@ -230,6 +236,11 @@ export const CalendarCard = forwardRef<CalendarCardRef, CalendarCardProps>(
       ],
     );
 
+    const extraData = useMemo(
+      () => [selectedDate, importantDateMarks],
+      [selectedDate, importantDateMarks],
+    );
+
     const renderSectionHeader = useCallback(
       ({ section }: { section: CalendarListSection }) => (
         <Animated.View
@@ -267,7 +278,7 @@ export const CalendarCard = forwardRef<CalendarCardRef, CalendarCardProps>(
           renderSectionHeader={renderSectionHeader}
           getItemLayout={getItemLayout}
           contentOffset={{ x: 0, y: initialScrollOffset }}
-          extraData={[selectedDate, importantDateMarks]}
+          extraData={extraData}
           stickySectionHeadersEnabled
           showsVerticalScrollIndicator={false}
           initialNumToRender={24}

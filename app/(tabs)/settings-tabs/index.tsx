@@ -385,8 +385,9 @@ export default function SettingsHome() {
                   className="text-base leading-6"
                   style={animatedSecondaryTextStyle}
                 >
-                  Current senior at Seattle University studying Computer Science
-                  with aspirations of becoming a Software Engineer.
+                  Recent graduate of Seattle University with a degree in
+                  Computer Science, now seeking opportunities as a Software
+                  Engineer.
                 </Animated.Text>
               </View>
               <View>
@@ -415,9 +416,9 @@ export default function SettingsHome() {
                   className="text-base leading-6"
                   style={animatedSecondaryTextStyle}
                 >
-                  Current senior at the University of Washington studying
-                  Management Information Systems with the hopes of becoming a
-                  Product Manager.
+                  Recent graduate of the University of Washington with a
+                  degree in Management Information Systems, now seeking
+                  opportunities as a Product Manager.
                 </Animated.Text>
               </View>
               <Animated.Text
