@@ -4,7 +4,7 @@ import * as Notifications from "expo-notifications";
 import * as TaskManager from "expo-task-manager";
 import { Platform } from "react-native";
 import { Prayers } from "@/constants/prayers";
-import { DEFAULT_PRAYER_SETTINGS, tuneSettingsToString } from "@/constants/prayerSettings";
+import { DEFAULT_PRAYER_SETTINGS, TimeFormat, tuneSettingsToString } from "@/constants/prayerSettings";
 import { getPrayerDict, PrayerDict, PrayerTimesParams } from "@/prayer-api/prayerTimesAPI";
 import { getLocalISODate } from "./calendarHelpers";
 import { parsePrayerTime } from "./prayerHelpers";
@@ -46,6 +46,7 @@ TaskManager.defineTask(TASK_NAME, async () => {
       ? JSON.parse(adhanEnabledStr)
       : {};
     const effectiveAdhanEnabled = adhanMasterToggle ? adhanEnabled : {};
+    const timeFormat = await getStoredTimeFormat();
 
     // Get currently scheduled notifications
     const scheduled = await Notifications.getAllScheduledNotificationsAsync();
@@ -106,7 +107,8 @@ TaskManager.defineTask(TASK_NAME, async () => {
           prayerTime,
           isoDate,
           timeString,
-          useAdhan
+          useAdhan,
+          timeFormat
         );
         if (id) scheduledCount++;
       }
@@ -121,6 +123,19 @@ TaskManager.defineTask(TASK_NAME, async () => {
     return BackgroundTask.BackgroundTaskResult.Failed;
   }
 });
+
+// Read the user's 12h/24h preference from the persisted prayer settings
+async function getStoredTimeFormat(): Promise<TimeFormat> {
+  try {
+    const settingsStr = await AsyncStorage.getItem("prayerSettings");
+    if (!settingsStr) return DEFAULT_PRAYER_SETTINGS.timeFormat;
+    const parsed = JSON.parse(settingsStr);
+    return parsed?.timeFormat ?? DEFAULT_PRAYER_SETTINGS.timeFormat;
+  } catch (error) {
+    console.warn("[NotificationCheck] Failed to read time format:", error);
+    return DEFAULT_PRAYER_SETTINGS.timeFormat;
+  }
+}
 
 // Fetch prayer times from API using cached location and settings
 async function fetchPrayerTimesForBackground(): Promise<PrayerDict | null> {

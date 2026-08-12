@@ -18,6 +18,13 @@ export const usePrayerTimes = (location: Location.LocationObject | null) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Only the fields that actually reach the API
+  const { method, school, latitudeAdjustmentMethod } = settings;
+  const tuneString = useMemo(
+    () => tuneSettingsToString(settings.tune),
+    [settings.tune]
+  );
+
   // Fetches prayer times when location or settings change
   // Fetches previous, current, and next month for better carousel experience
   useEffect(() => {
@@ -45,10 +52,10 @@ export const usePrayerTimes = (location: Location.LocationObject | null) => {
         const params = {
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,
-          method: settings.method,
-          school: settings.school,
-          latitudeAdjustmentMethod: settings.latitudeAdjustmentMethod,
-          tune: tuneSettingsToString(settings.tune),
+          method,
+          school,
+          latitudeAdjustmentMethod,
+          tune: tuneString,
         };
 
         // Fetch current month first (priority)
@@ -84,7 +91,14 @@ export const usePrayerTimes = (location: Location.LocationObject | null) => {
         setLoading(false);
       }
     })();
-  }, [location, settings, settingsLoading]);
+  }, [
+    location,
+    method,
+    school,
+    latitudeAdjustmentMethod,
+    tuneString,
+    settingsLoading,
+  ]);
 
   // Sorts prayerDict dates in numerical order which is chronological for ISO strings
   const sortedDates = useMemo(

@@ -1,7 +1,8 @@
+import { TimeFormat } from "@/constants/prayerSettings";
 import { Prayers } from "@/constants/prayers";
 import { PrayerDict } from "@/prayer-api/prayerTimesAPI";
 import { getLocalISODate } from "@/utils/calendarHelpers";
-import { cleanTimeString, parsePrayerTime } from "@/utils/prayerHelpers";
+import { formatTimeWithPreference, parsePrayerTime } from "@/utils/prayerHelpers";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
@@ -60,7 +61,8 @@ export const schedulePrayerNotification = async (
   prayerTime: Date,
   isoDate: string,
   timeString: string,
-  useAdhan: boolean = false
+  useAdhan: boolean = false,
+  timeFormat: TimeFormat = "24h"
 ): Promise<string | null> => {
   try {
     // Don't schedule if the time has already passed
@@ -68,8 +70,8 @@ export const schedulePrayerNotification = async (
       return null;
     }
 
-    // Format: "{PRAYER} At {PRAYER_TIME}"
-    const formattedTime = cleanTimeString(timeString);
+    // Format: "{PRAYER} At {PRAYER_TIME}" 
+    const formattedTime = formatTimeWithPreference(timeString, timeFormat);
     const title = `${prayer} At ${formattedTime}`;
     const body = PRAYER_DESCRIPTIONS[prayer] || `It's time for ${prayer}`;
 
@@ -111,12 +113,38 @@ export const cancelPrayerNotifications = async (prayer: string): Promise<void> =
     console.error(`Failed to cancel notifications for ${prayer}:`, error);
   }
 };
+let schedulingChain: Promise<void> = Promise.resolve();
+let latestScheduleRequest = 0;
 
 // Schedule notifications for all enabled prayers based on prayer times
-export const scheduleAllPrayerNotifications = async (
+export const scheduleAllPrayerNotifications = (
   prayerDict: PrayerDict,
   enabledPrayers: Record<string, boolean>,
-  adhanEnabled: Record<string, boolean> = {}
+  adhanEnabled: Record<string, boolean> = {},
+  timeFormat: TimeFormat = "24h"
+): Promise<void> => {
+  const requestId = ++latestScheduleRequest;
+
+  schedulingChain = schedulingChain
+    .catch(() => {})
+    .then(() => {
+      if (requestId !== latestScheduleRequest) return;
+      return performScheduleAll(
+        prayerDict,
+        enabledPrayers,
+        adhanEnabled,
+        timeFormat
+      );
+    });
+
+  return schedulingChain;
+};
+
+const performScheduleAll = async (
+  prayerDict: PrayerDict,
+  enabledPrayers: Record<string, boolean>,
+  adhanEnabled: Record<string, boolean>,
+  timeFormat: TimeFormat
 ): Promise<void> => {
   // Cancel all existing prayer notifications first
   await cancelAllPrayerNotifications();
@@ -147,7 +175,14 @@ export const scheduleAllPrayerNotifications = async (
 
       const prayerTime = parsePrayerTime(isoDate, timeString);
       const useAdhan = adhanEnabled[prayer] ?? false;
-      const id = await schedulePrayerNotification(prayer, prayerTime, isoDate, timeString, useAdhan);
+      const id = await schedulePrayerNotification(
+        prayer,
+        prayerTime,
+        isoDate,
+        timeString,
+        useAdhan,
+        timeFormat
+      );
       if (id) expectedCount++;
     }
   }

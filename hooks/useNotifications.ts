@@ -1,4 +1,5 @@
 import { useNotificationSettings } from "@/context/NotificationSettingsContext";
+import { usePrayerSettings } from "@/context/PrayerSettingsContext";
 import { PrayerDict } from "@/prayer-api/prayerTimesAPI";
 import {
   cancelAllPrayerNotifications,
@@ -22,6 +23,11 @@ export const useNotifications = (prayerDict: PrayerDict = {}) => {
     toggleMasterNotifications,
     loading,
   } = useNotificationSettings();
+
+  // Notification contain prayer time, so they have to be rebuilt whenever the 12h/24h preference changes.
+  const { settings: prayerSettings, loading: prayerSettingsLoading } =
+    usePrayerSettings();
+  const { timeFormat } = prayerSettings;
 
   // Get the current notification state for a prayer
   // Sunrise never has adhan state
@@ -87,9 +93,9 @@ export const useNotifications = (prayerDict: PrayerDict = {}) => {
     ]
   );
 
-  // Schedule notifications when prayer times or enabled prayers change
+  // Reschedule when prayer times, enabled prayers, or the time format change.
   useEffect(() => {
-    if (loading) return;
+    if (loading || prayerSettingsLoading) return;
 
     // Only schedule if master toggle is on and there are enabled prayers
     if (
@@ -102,7 +108,8 @@ export const useNotifications = (prayerDict: PrayerDict = {}) => {
       scheduleAllPrayerNotifications(
         prayerDict,
         notificationsEnabled,
-        effectiveAdhanEnabled
+        effectiveAdhanEnabled,
+        timeFormat
       );
     } else if (!masterToggle) {
       // Cancel all if master toggle is off
@@ -115,6 +122,8 @@ export const useNotifications = (prayerDict: PrayerDict = {}) => {
     adhanEnabled,
     masterToggle,
     loading,
+    timeFormat,
+    prayerSettingsLoading,
   ]);
 
   return {

@@ -14,10 +14,11 @@ export const MANUAL_KEY_DATES: { month: string; day: number; label: string }[] =
     { month: "02", day: 1, label: "Battle of Khaybar" },
     { month: "09", day: 17, label: "Battle of Badr" },
     { month: "09", day: 20, label: "Conquest of Mecca" },
-    { month: "10", day: 1, label: "Battle of the Trench" },
     { month: "10", day: 2, label: "Six Days of Shawwal" },
     { month: "10", day: 7, label: "Battle of Uhud" },
     { month: "10", day: 10, label: "Battle of Hunayn" },
+    // Historians agree it was in Shawwal 5 AH but no exact date.
+    { month: "10", day: 23, label: "Battle of the Trench" },
     { month: "11", day: 15, label: "Treaty of Hudaybiyyah" },
     { month: "12", day: 1, label: "First 10 Days of Dhul Hijjah" },
 ];
