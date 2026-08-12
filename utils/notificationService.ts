@@ -126,7 +126,6 @@ export const scheduleAllPrayerNotifications = (
   const requestId = ++latestScheduleRequest;
 
   schedulingChain = schedulingChain
-    .catch(() => {})
     .then(() => {
       if (requestId !== latestScheduleRequest) return;
       return performScheduleAll(
@@ -135,6 +134,9 @@ export const scheduleAllPrayerNotifications = (
         adhanEnabled,
         timeFormat
       );
+    })
+    .catch((error) => {
+      console.error("[Notifications] Scheduling run failed:", error);
     });
 
   return schedulingChain;
