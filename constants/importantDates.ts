@@ -23,6 +23,13 @@ export const MANUAL_KEY_DATES: { month: string; day: number; label: string }[] =
     { month: "12", day: 1, label: "First 10 Days of Dhul Hijjah" },
 ];
 
+// Shown under the name in the day sheet, for dates that resolve to more than one
+// day. Lailat-ul-Qadr is deliberately marked on all five odd nights, so the row
+// has to say so rather than implying the tapped night is the night.
+export const KEY_DATE_SUBTITLES: Record<string, string> = {
+    "Lailat-ul-Qadr": "One of five possible nights",
+};
+
 export const IMPORTANT_DATE_DESCRIPTIONS: Record<string, string> = {
     "Ashura":
         "Ashura (10th of Muharram) commemorates the day Allah saved Prophet Musa and the Children of Israel from Pharaoh. Observance typically includes fasting on this day.",
