@@ -200,14 +200,6 @@ export default function CalendarScreen() {
     setIsSheetOpen(true);
   }, []);
 
-  // Page to the key date's month as well as opening it, so the grid behind the
-  // sheet shows the day being described rather than wherever you'd paged to.
-  const handleNextKeyDatePress = useCallback((iso: string) => {
-    pagerRef.current?.goToIso(iso);
-    setSelectedIso(iso);
-    setIsSheetOpen(true);
-  }, []);
-
   const selectedInfo = selectedIso ? calendarIndex.byIso.get(selectedIso) : undefined;
   // Undefined outside the 3-month prayer window, or with no location at all —
   // the sheet omits the section rather than showing an error.
@@ -252,8 +244,10 @@ export default function CalendarScreen() {
               isDarkMode={isDarkMode}
               onDayPress={handleDayPress}
             />
-            {/* Spacer pins the strip to the bottom without absolute positioning */}
-            <View className="flex-1" />
+            {/* Bottom-anchored by its own absolute positioning, so expanding
+                it grows upward over the grid instead of reflowing anything.
+                STRIP_HEIGHT is still reserved in the grid's chrome budget
+                above, which is what keeps the collapsed row clear of it. */}
             <NextKeyDateStrip
               height={STRIP_HEIGHT}
               contentInset={contentInset}
@@ -261,7 +255,6 @@ export default function CalendarScreen() {
               isLoading={calendarDays === null}
               colors={colors}
               isDarkMode={isDarkMode}
-              onPress={handleNextKeyDatePress}
             />
           </>
         )}

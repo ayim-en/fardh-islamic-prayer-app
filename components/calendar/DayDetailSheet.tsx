@@ -7,11 +7,16 @@ import {
   darkModeColors,
   lightModeColors,
   Prayers,
+  type Prayer,
 } from "@/constants/prayers";
 import type { TimeFormat } from "@/constants/prayerSettings";
 import type { Timings } from "@/prayer-api/prayerTimesAPI";
-import { formatTimeWithPreference } from "@/utils/prayerHelpers";
-import React, { useEffect, useRef, useState } from "react";
+import { getTodayISO } from "@/utils/calendarHelpers";
+import {
+  formatTimeWithPreference,
+  prayerTimeToMinutes,
+} from "@/utils/prayerHelpers";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
@@ -19,7 +24,6 @@ import {
   Modal,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   View,
 } from "react-native";
@@ -27,6 +31,25 @@ import {
 const ANIMATION_DURATION_IN = 250;
 const ANIMATION_DURATION_OUT = 200;
 const OVERLAY = "rgba(0,0,0,0.35)";
+
+// Hairline between the sheet body and the prayer-time row. A shade tighter to
+// the background than backgroundSecondary, so it reads as a rule rather than a
+// band of fill.
+const RULE_LIGHT = "#edf1f4";
+const RULE_DARK = "#2a2a3e";
+
+// Prayer times run as two rows of three rather than one row of six: six
+// columns on a narrow phone left no air between "Sunrise" and "Maghrib", and
+// capped the times at a size you had to squint at. Half the columns buys
+// roughly double the width, which the type sizes below spend. Top row is the
+// three daytime prayers; everything else falls
+// beneath it. Derived from `Prayers` rather than hard-coded, so dropping
+// Sunrise there (as that file invites) reflows to 3 + 2 on its own.
+const TOP_ROW: readonly Prayer[] = ["Fajr", "Dhuhr", "Asr"];
+const PRAYER_ROWS: Prayer[][] = [
+  Prayers.filter((prayer) => TOP_ROW.includes(prayer)),
+  Prayers.filter((prayer) => !TOP_ROW.includes(prayer)),
+];
 
 const infoIcon = require("../../assets/images/prayer-pro-icons/calendar-tab/calendar-info.png");
 const chevronIcon = require("../../assets/images/prayer-pro-icons/settings-tab/settings-dropdown.png");
@@ -74,6 +97,22 @@ export const DayDetailSheet = ({
   const sheetAnim = useRef(new Animated.Value(screenHeight)).current;
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  // The accent marker on a prayer only means something on today's sheet —
+  // every other day has no "now" to point at. Recomputed per open (hence
+  // `visible` in the deps) so the clock is read fresh rather than at mount.
+  const currentPrayer = useMemo<Prayer | null>(() => {
+    if (!visible || !iso || !prayerTimes || iso !== getTodayISO()) return null;
+
+    const now = new Date();
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    let latest: Prayer | null = null;
+    for (const prayer of Prayers) {
+      if (prayerTimeToMinutes(prayerTimes[prayer]) > nowMinutes) break;
+      latest = prayer;
+    }
+    return latest;
+  }, [visible, iso, prayerTimes]);
 
   // Modal keeps children mounted when visible flips false, so without this the
   // next open would inherit the previous day's expansion.
@@ -137,33 +176,57 @@ export const DayDetailSheet = ({
       accessibilityViewIsModal
     >
       <View className="flex-1" style={{ backgroundColor: OVERLAY }}>
-        <Pressable className="flex-1" onPress={closeWithAnimation} accessible={false} />
+        {/* The sheet carries no Close button, so the dim is the close control
+            and has to be reachable by a screen reader rather than hidden. */}
+        <Pressable
+          className="flex-1"
+          onPress={closeWithAnimation}
+          accessibilityRole="button"
+          accessibilityLabel="Close day details"
+        />
 
         <View className="absolute left-0 right-0" style={{ bottom: 0 }}>
           <Animated.View style={{ transform: [{ translateY: sheetAnim }] }}>
             <View
-              className="rounded-t-3xl px-5 pt-2 pb-8"
-              style={{ backgroundColor: themeColors.background }}
+              className="px-4 pt-[9px] pb-[26px]"
+              style={{
+                backgroundColor: themeColors.background,
+                borderTopLeftRadius: 22,
+                borderTopRightRadius: 22,
+                // Lifts the sheet off the dimmed grid rather than letting the
+                // two flat fills meet at the rounded edge.
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: -8 },
+                shadowOpacity: 0.16,
+                shadowRadius: 13,
+                elevation: 24,
+              }}
             >
+              {/* Retints with the prayer theme rather than sitting at the
+                  fixed gray — it's the sheet's own handle, so it belongs to the
+                  accent family like the icons below, not to the disabled tone. */}
               <View className="mb-3 items-center">
                 <View
-                  className="h-1.5 w-12 rounded-full"
+                  className="h-1 w-[38px] rounded-full"
                   style={{ backgroundColor: colors.inactive }}
                 />
               </View>
 
               <Text
-                className="text-xl font-bold"
-                style={{ color: themeColors.text }}
+                className="text-[19px] font-bold"
+                style={{ color: themeColors.text, letterSpacing: -0.38 }}
                 accessibilityRole="header"
               >
                 {iso ? formatSheetDate(iso) : ""}
               </Text>
-              {/* Transliteration only — no Arabic script anywhere in this design. */}
+              {/* Transliteration only — no Arabic script anywhere in this
+                  design. Full accent rather than the grid's muted Hijri tone:
+                  in a cell it sits under a numeral and has to recede, but here
+                  it's the second half of the sheet's title. */}
               {hijriLabel && (
                 <Text
-                  className="text-sm font-semibold mt-0.5"
-                  style={{ color: themeColors.textSecondary }}
+                  className="text-[11.5px] font-semibold mt-px"
+                  style={{ color: colors.active }}
                 >
                   {hijriLabel}
                 </Text>
@@ -179,11 +242,14 @@ export const DayDetailSheet = ({
                       // description expands INSIDE it rather than below it.
                       <View
                         key={name}
-                        className="rounded-xl overflow-hidden mb-2"
-                        style={{ backgroundColor: themeColors.backgroundSecondary }}
+                        className="overflow-hidden mb-2"
+                        style={{
+                          backgroundColor: themeColors.backgroundSecondary,
+                          borderRadius: 13,
+                        }}
                       >
                         <Pressable
-                          className="flex-row items-center gap-2.5 px-3 py-3"
+                          className="flex-row items-center gap-[9px] px-3 py-[11px]"
                           onPress={() => toggleExpanded(name)}
                           accessibilityRole="button"
                           accessibilityState={{ expanded: isOpen }}
@@ -191,15 +257,15 @@ export const DayDetailSheet = ({
                           <AnimatedTintIcon source={infoIcon} size={17} tintColor={colors.active} />
                           <View className="flex-1">
                             <Text
-                              className="text-[15px] font-bold"
-                              style={{ color: themeColors.text }}
+                              className="text-sm font-bold"
+                              style={{ color: themeColors.text, letterSpacing: -0.14 }}
                             >
                               {name}
                             </Text>
                             {subtitle && (
                               <Text
                                 className="text-[11px] font-semibold mt-0.5"
-                                style={{ color: themeColors.textSecondary }}
+                                style={{ color: themeColors.sectionTitle }}
                               >
                                 {subtitle}
                               </Text>
@@ -220,7 +286,7 @@ export const DayDetailSheet = ({
                           >
                             <AnimatedTintIcon
                               source={chevronIcon}
-                              size={13}
+                              size={12}
                               tintColor={colors.active}
                             />
                           </View>
@@ -228,8 +294,11 @@ export const DayDetailSheet = ({
 
                         {isOpen && (
                           <Text
-                            className="text-[13px] leading-5 px-3 pb-3"
-                            style={{ color: themeColors.textSecondary }}
+                            className="text-[12.5px] px-3 pb-3"
+                            style={{
+                              color: themeColors.textSecondary,
+                              lineHeight: 19.5,
+                            }}
                           >
                             {IMPORTANT_DATE_DESCRIPTIONS[name] ??
                               "Description not available."}
@@ -245,48 +314,58 @@ export const DayDetailSheet = ({
                   location — no error, no empty state. */}
               {prayerTimes && (
                 <View
-                  className="flex-row justify-between mt-4 pt-3"
+                  className="mt-[13px] pt-[11px]"
                   style={{
-                    borderTopWidth: StyleSheet.hairlineWidth,
-                    borderTopColor: isDarkMode
-                      ? "rgba(255,255,255,0.1)"
-                      : "rgba(0,0,0,0.08)",
+                    borderTopWidth: 1,
+                    borderTopColor: isDarkMode ? RULE_DARK : RULE_LIGHT,
                   }}
                 >
-                  {Prayers.map((prayer) => (
-                    <View key={prayer} className="items-center gap-1">
-                      <Text
-                        className="text-[9px] font-bold uppercase"
-                        style={{ color: themeColors.textSecondary }}
-                      >
-                        {prayer}
-                      </Text>
-                      <Text
-                        className="text-xs font-semibold"
-                        style={{ color: themeColors.textSecondary }}
-                      >
-                        {formatTimeWithPreference(prayerTimes[prayer], timeFormat)}
-                      </Text>
+                  {PRAYER_ROWS.map((row, rowIndex) => (
+                    <View
+                      key={rowIndex}
+                      className={`flex-row ${rowIndex > 0 ? "mt-3" : ""}`}
+                    >
+                      {row.map((prayer) => {
+                        const isNow = prayer === currentPrayer;
+                        return (
+                          // flex-1 rather than justify-between: three items
+                          // spread edge-to-edge would leave the two rows on
+                          // different centres, and the columns have to line up.
+                          <View key={prayer} className="flex-1 items-center gap-1.5">
+                            <Text
+                              className="text-[11px] font-bold uppercase"
+                              style={{
+                                // Themed, so the row retints with the prayer;
+                                // the current prayer steps up to the full
+                                // accent against its muted siblings.
+                                color: isNow ? colors.active : colors.inactive,
+                                letterSpacing: 0.5,
+                              }}
+                            >
+                              {prayer}
+                            </Text>
+                            <Text
+                              className="text-[15px]"
+                              style={{
+                                color: isNow
+                                  ? colors.active
+                                  : themeColors.textSecondary,
+                                fontWeight: isNow ? "800" : "600",
+                                fontVariant: ["tabular-nums"],
+                              }}
+                            >
+                              {formatTimeWithPreference(
+                                prayerTimes[prayer],
+                                timeFormat
+                              )}
+                            </Text>
+                          </View>
+                        );
+                      })}
                     </View>
                   ))}
                 </View>
               )}
-
-              <View className="mt-6 items-center">
-                <Pressable
-                  onPress={closeWithAnimation}
-                  accessibilityRole="button"
-                  accessibilityLabel="Close day details"
-                  hitSlop={8}
-                >
-                  <Text
-                    className="text-center font-semibold"
-                    style={{ color: colors.inactive }}
-                  >
-                    Close
-                  </Text>
-                </Pressable>
-              </View>
             </View>
           </Animated.View>
         </View>
