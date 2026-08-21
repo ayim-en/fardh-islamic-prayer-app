@@ -13,6 +13,7 @@ import {
   darkModeColors,
   lightModeColors,
   prayerBackgrounds,
+  type Prayer,
 } from "@/constants/prayers";
 import { useCalendarSettings } from "@/context/CalendarSettingsContext";
 import { usePrayerSettings } from "@/context/PrayerSettingsContext";
@@ -72,7 +73,12 @@ export default function CalendarScreen() {
   const { settings: calendarSettings, loading: calendarSettingsLoading } =
     useCalendarSettings();
   const { location } = useLocation();
-  const { prayerDict } = usePrayerTimes(location);
+  // `currentPrayer` here, not the one on the theme: the theme's copy is only
+  // written while no manual override is set (see app/(tabs)/_layout.tsx), so
+  // it freezes the moment someone picks a theme. This one is recomputed on a
+  // timer and on focus.
+  const { prayerDict, currentPrayer: prayerInProgress } =
+    usePrayerTimes(location);
   const { settings: prayerSettings } = usePrayerSettings();
 
   const [calendarDays, setCalendarDays] = useState<CalendarDay[] | null>(null);
@@ -266,6 +272,7 @@ export default function CalendarScreen() {
         hijriLabel={selectedInfo?.hijriFullLabel ?? null}
         keyDates={selectedInfo?.keyDates ?? []}
         prayerTimes={selectedTimings ?? null}
+        currentPrayer={(prayerInProgress?.prayer as Prayer) ?? null}
         timeFormat={prayerSettings.timeFormat}
         isDarkMode={isDarkMode}
         colors={colors}

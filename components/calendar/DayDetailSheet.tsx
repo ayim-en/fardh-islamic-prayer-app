@@ -12,11 +12,8 @@ import {
 import type { TimeFormat } from "@/constants/prayerSettings";
 import type { Timings } from "@/prayer-api/prayerTimesAPI";
 import { getTodayISO } from "@/utils/calendarHelpers";
-import {
-  formatTimeWithPreference,
-  prayerTimeToMinutes,
-} from "@/utils/prayerHelpers";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { formatTimeWithPreference } from "@/utils/prayerHelpers";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
@@ -41,14 +38,16 @@ const RULE_DARK = "#2a2a3e";
 // Prayer times run as two rows of three rather than one row of six: six
 // columns on a narrow phone left no air between "Sunrise" and "Maghrib", and
 // capped the times at a size you had to squint at. Half the columns buys
-// roughly double the width, which the type sizes below spend. Top row is the
-// three daytime prayers; everything else falls
-// beneath it. Derived from `Prayers` rather than hard-coded, so dropping
+// roughly double the width, which the type sizes below spend.
+//
+// Split chronologically rather than by any grouping of the prayers themselves:
+// reading order is left-to-right then down, so the day runs Fajr through Isha
+// in sequence. Sliced from `Prayers` rather than hard-coded, so dropping
 // Sunrise there (as that file invites) reflows to 3 + 2 on its own.
-const TOP_ROW: readonly Prayer[] = ["Fajr", "Dhuhr", "Asr"];
+const ROW_SPLIT = Math.ceil(Prayers.length / 2);
 const PRAYER_ROWS: Prayer[][] = [
-  Prayers.filter((prayer) => TOP_ROW.includes(prayer)),
-  Prayers.filter((prayer) => !TOP_ROW.includes(prayer)),
+  Prayers.slice(0, ROW_SPLIT),
+  Prayers.slice(ROW_SPLIT),
 ];
 
 const infoIcon = require("../../assets/images/prayer-pro-icons/calendar-tab/calendar-info.png");
@@ -62,6 +61,8 @@ export interface DayDetailSheetProps {
   keyDates: string[];
   /** Null when the day falls outside the fetched prayer-times window. */
   prayerTimes: Timings | null;
+  /** The prayer in progress right now, app-wide. Only marked on today's sheet. */
+  currentPrayer: Prayer | null;
   timeFormat: TimeFormat;
   isDarkMode: boolean;
   colors: { active: string; inactive: string };
@@ -84,6 +85,7 @@ export const DayDetailSheet = ({
   hijriLabel,
   keyDates,
   prayerTimes,
+  currentPrayer,
   timeFormat,
   isDarkMode,
   colors,
@@ -99,20 +101,17 @@ export const DayDetailSheet = ({
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   // The accent marker on a prayer only means something on today's sheet —
-  // every other day has no "now" to point at. Recomputed per open (hence
-  // `visible` in the deps) so the clock is read fresh rather than at mount.
-  const currentPrayer = useMemo<Prayer | null>(() => {
-    if (!visible || !iso || !prayerTimes || iso !== getTodayISO()) return null;
-
-    const now = new Date();
-    const nowMinutes = now.getHours() * 60 + now.getMinutes();
-    let latest: Prayer | null = null;
-    for (const prayer of Prayers) {
-      if (prayerTimeToMinutes(prayerTimes[prayer]) > nowMinutes) break;
-      latest = prayer;
-    }
-    return latest;
-  }, [visible, iso, prayerTimes]);
+  // every other day has no "now" to point at.
+  //
+  // Whichever prayer has most recently started, passed down rather than
+  // recomputed here: it comes from the same getCurrentPrayer the rest of the
+  // app runs on, which carries the pre-Fajr case a local scan of today's times
+  // gets wrong — between midnight and Fajr the prayer in progress is
+  // yesterday's Isha, not "none".
+  //
+  // Note this is the prayer in progress, NOT the next one due. After Isha
+  // nothing is marked until Fajr rolls the date over onto tomorrow's sheet.
+  const markedPrayer = iso === getTodayISO() ? currentPrayer : null;
 
   // Modal keeps children mounted when visible flips false, so without this the
   // next open would inherit the previous day's expansion.
@@ -326,7 +325,7 @@ export const DayDetailSheet = ({
                       className={`flex-row ${rowIndex > 0 ? "mt-3" : ""}`}
                     >
                       {row.map((prayer) => {
-                        const isNow = prayer === currentPrayer;
+                        const isNow = prayer === markedPrayer;
                         return (
                           // flex-1 rather than justify-between: three items
                           // spread edge-to-edge would leave the two rows on
