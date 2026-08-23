@@ -73,10 +73,10 @@ export default function CalendarScreen() {
   const { settings: calendarSettings, loading: calendarSettingsLoading } =
     useCalendarSettings();
   const { location } = useLocation();
-  // `currentPrayer` here, not the one on the theme: the theme's copy is only
-  // written while no manual override is set (see app/(tabs)/_layout.tsx), so
-  // it freezes the moment someone picks a theme. This one is recomputed on a
-  // timer and on focus.
+  // The prayer in progress, taken straight from the hook that computes it
+  // rather than from the theme. The theme's copy is fed from this same value
+  // (see app/(tabs)/_layout.tsx) and is equally live now, but reading it here
+  // would trail a render behind and lean on that effect having already run.
   const { prayerDict, currentPrayer: prayerInProgress } =
     usePrayerTimes(location);
   const { settings: prayerSettings } = usePrayerSettings();

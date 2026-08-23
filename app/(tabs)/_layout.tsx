@@ -3,6 +3,7 @@ import {
   darkModeColors,
   lightModeColors,
   prayerThemeColors,
+  type Prayer,
 } from "@/constants/prayers";
 import { usePrayerSettings } from "@/context/PrayerSettingsContext";
 import { useThemeColors } from "@/context/ThemeContext";
@@ -46,20 +47,31 @@ export default function TabLayout() {
     ? darkModeColors.background
     : lightModeColors.background;
 
-  // Update theme colors based on current prayer (only if no theme override is set)
+  // Publish the prayer actually in progress, override or not. This used to sit
+  // inside the `!themePrayer` guard below, which froze it at whatever prayer
+  // was running when the override was picked — and ThemeContext persists it, so
+  // the stale value outlived the session. Anything asking the theme "what
+  // prayer is it now" needs an answer that tracks the clock; an override is a
+  // statement about colour, not about the time of day.
   useEffect(() => {
-    if (!themePrayer && currentPrayer?.prayer) {
-      const prayerName = currentPrayer.prayer as keyof typeof prayerThemeColors;
-      const themeColors = prayerThemeColors[prayerName];
-      if (themeColors) {
-        setColors({
-          active: themeColors.active,
-          inactive: themeColors.inactive,
-        });
-      }
-      setCurrentPrayer(currentPrayer.prayer as any);
+    if (currentPrayer?.prayer) {
+      setCurrentPrayer(currentPrayer.prayer as Prayer);
     }
-  }, [currentPrayer, setColors, themePrayer, setCurrentPrayer]);
+  }, [currentPrayer, setCurrentPrayer]);
+
+  // Colours, by contrast, do yield to a manual override. (ThemeContext's
+  // setColors no-ops under an override anyway; the guard keeps that visible
+  // here rather than resting on it.)
+  useEffect(() => {
+    if (themePrayer || !currentPrayer?.prayer) return;
+    const themeColors = prayerThemeColors[currentPrayer.prayer as Prayer];
+    if (themeColors) {
+      setColors({
+        active: themeColors.active,
+        inactive: themeColors.inactive,
+      });
+    }
+  }, [currentPrayer, setColors, themePrayer]);
 
   // Sync prayer times with iOS widget (7 days of data for timeline)
   useEffect(() => {
