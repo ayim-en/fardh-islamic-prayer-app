@@ -58,14 +58,9 @@ describe("getCurrentPrayerFromDay", () => {
   });
 
   it("handles times carrying the API's timezone suffix", () => {
-    const suffixed = {
-      fajr: "05:12 (GMT)",
-      sunrise: "06:40 (GMT)",
-      dhuhr: "12:15 (GMT)",
-      asr: "15:30 (GMT)",
-      maghrib: "18:05 (GMT)",
-      isha: "19:35 (GMT)",
-    };
+    const suffixed = Object.fromEntries(
+      Object.entries(DAY).map(([prayer, time]) => [prayer, `${time} (GMT)`])
+    ) as typeof DAY;
     expect(getCurrentPrayerFromDay(suffixed, at(18, 30))).toBe("Maghrib");
   });
 });

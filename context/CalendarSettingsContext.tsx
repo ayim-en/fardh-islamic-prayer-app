@@ -62,17 +62,15 @@ export const CalendarSettingsProvider: React.FC<{
         updated.adjustment = 0;
       }
 
-      // Decided before the write, while `settings` is still the previous value.
-      // Only a change the cached data was computed from is worth a refetch;
-      // cosmetic changes leave the 25-month window intact.
-      // Cleared before setSettings, because that re-runs the calendar screen's
-      // fetch effect and it would otherwise read the cache we are dropping.
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+
+      // Cleared before setSettings, which re-runs the calendar screen's fetch
+      // effect — it would otherwise read the cache we are dropping.
       if (invalidatesCalendarCache(settings, updated)) {
         await clearCalendarCache();
       }
 
       setSettings(updated);
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     } catch (error) {
       console.error("Error saving calendar settings:", error);
     }

@@ -37,6 +37,18 @@ describe("invalidatesCalendarCache", () => {
     ).toBe(true);
   });
 
+  // The context zeroes the adjustment for any method but MATHEMATICAL before
+  // saving, and passes the normalised values here. That reset is a real change
+  // to what the calendar is fetched with, so it must clear.
+  it("clears the cache when normalisation zeroes a stale adjustment", () => {
+    expect(
+      invalidatesCalendarCache(
+        settings({ calendarMethod: "HJCoSA", adjustment: 2 }),
+        settings({ calendarMethod: "HJCoSA", adjustment: 0 })
+      )
+    ).toBe(true);
+  });
+
   // The original bug: a cosmetic preference wiped the whole 25-month window.
   it("keeps the cache when only the primary date system changes", () => {
     expect(
