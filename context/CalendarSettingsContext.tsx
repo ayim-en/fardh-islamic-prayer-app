@@ -1,9 +1,9 @@
 import {
   CalendarSettings,
   DEFAULT_CALENDAR_SETTINGS,
-  invalidatesCalendarCache,
 } from "@/constants/calendarSettings";
 import { clearCalendarCache } from "@/utils/cacheHelpers";
+import { saveCalendarSettings } from "@/utils/calendarSettingsHelpers";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useContext, useEffect, useState } from "react";
 
@@ -49,26 +49,16 @@ export const CalendarSettingsProvider: React.FC<{
     loadSettings();
   }, []);
 
-  // Update settings and persist to AsyncStorage
+  // Update settings and persist to AsyncStorage. The normalisation, the
+  // decision to clear the cache and the order of the two writes all live in
+  // saveCalendarSettings, where they are tested; this supplies the storage.
   const updateSettings = async (newSettings: Partial<CalendarSettings>) => {
     try {
-      const updated = { ...settings, ...newSettings };
-
-      // If adjustment is set but method is not MATHEMATICAL, reset adjustment
-      if (
-        updated.calendarMethod !== "MATHEMATICAL" &&
-        updated.adjustment !== 0
-      ) {
-        updated.adjustment = 0;
-      }
-
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-
-      // Cleared before setSettings, which re-runs the calendar screen's fetch
-      // effect — it would otherwise read the cache we are dropping.
-      if (invalidatesCalendarCache(settings, updated)) {
-        await clearCalendarCache();
-      }
+      const updated = await saveCalendarSettings(settings, newSettings, {
+        persist: (next) =>
+          AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)),
+        clearCache: clearCalendarCache,
+      });
 
       setSettings(updated);
     } catch (error) {
