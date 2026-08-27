@@ -1,7 +1,7 @@
 import {
-  CalendarMethodId,
   CalendarSettings,
   DEFAULT_CALENDAR_SETTINGS,
+  invalidatesCalendarCache,
 } from "@/constants/calendarSettings";
 import { clearCalendarCache } from "@/utils/cacheHelpers";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -62,11 +62,17 @@ export const CalendarSettingsProvider: React.FC<{
         updated.adjustment = 0;
       }
 
+      // Decided before the write, while `settings` is still the previous value.
+      // Only a change the cached data was computed from is worth a refetch;
+      // cosmetic changes leave the 25-month window intact.
+      // Cleared before setSettings, because that re-runs the calendar screen's
+      // fetch effect and it would otherwise read the cache we are dropping.
+      if (invalidatesCalendarCache(settings, updated)) {
+        await clearCalendarCache();
+      }
+
       setSettings(updated);
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-
-      // Clear calendar cache when settings change so new data is fetched
-      await clearCalendarCache();
     } catch (error) {
       console.error("Error saving calendar settings:", error);
     }
