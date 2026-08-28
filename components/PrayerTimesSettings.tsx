@@ -1,9 +1,9 @@
 import { AnimatedTintIcon } from "@/components/AnimatedTintIcon";
 import {
   CALCULATION_METHODS,
-  LAST_THIRD_EXAMPLE,
   LAST_THIRD_OPTIONS,
   LATITUDE_ADJUSTMENTS,
+  lastThirdSummary,
   PrayerSettings,
   SCHOOLS,
   TIME_FORMATS,
@@ -563,7 +563,7 @@ export const PrayerTimesSettings = ({
               Last Third of the Night
             </Animated.Text>
             <Animated.Text className="text-sm" style={animatedActiveTextStyle}>
-              {LAST_THIRD_EXAMPLE}
+              {lastThirdSummary(localShowLastThird)}
             </Animated.Text>
           </View>
           <Animated.View

@@ -110,6 +110,16 @@ export const LAST_THIRD_OPTIONS: {
   { id: false, name: "Hide", description: "Prayer screen shows the date only" },
 ];
 
+// The collapsed setting row's summary. Leads with the chosen option, as every
+// other row in the section does, and carries the sample only when the label is
+// one the prayer screen will actually draw — appending it to Hide would
+// advertise something the user has just turned off.
+export const lastThirdSummary = (showLastThird: boolean): string => {
+  const option = LAST_THIRD_OPTIONS.find((o) => o.id === showLastThird);
+  const name = option?.name ?? LAST_THIRD_OPTIONS[0].name;
+  return showLastThird ? `${name} (${LAST_THIRD_EXAMPLE})` : name;
+};
+
 // Default settings
 export const DEFAULT_PRAYER_SETTINGS = {
   method: 2, // ISNA
