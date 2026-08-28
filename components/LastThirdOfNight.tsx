@@ -8,7 +8,7 @@ import {
   isWithinLastThird,
 } from "@/utils/prayerHelpers";
 import React, { useMemo } from "react";
-import { StyleProp, TextStyle, View } from "react-native";
+import { StyleProp, Text, TextStyle, View } from "react-native";
 import Animated from "react-native-reanimated";
 
 // How far the label is dimmed while the window is shut. Enough to read as
@@ -18,27 +18,40 @@ const DIMMED_OPACITY = 0.55;
 type LabelBodyProps = {
   startTime: string;
   isActive: boolean;
+  activeColor: string;
   textStyle: StyleProp<TextStyle>;
 };
 
-// The caption sits above the time and matches the TODAY badge opposite it, so
-// the two sides of the date row read as a pair.
-const LabelBody = ({ startTime, isActive, textStyle }: LabelBodyProps) => (
+// The caption sits above the time and is styled exactly as the TODAY badge
+// opposite it — same size, weight and accent colour — so the two sides of the
+// date row read as a pair. Being a fixed label rather than a value, it does
+// not dim: the time below it carries whether the window is open.
+const LabelBody = ({
+  startTime,
+  isActive,
+  activeColor,
+  textStyle,
+}: LabelBodyProps) => (
   <View
     className="items-end"
-    style={{ opacity: isActive ? 1 : DIMMED_OPACITY }}
     // Read as one phrase carrying the full term, rather than as an
     // abbreviated label followed by a bare time.
     accessible
     accessibilityLabel={`Last third of the night begins at ${startTime}`}
   >
-    <Animated.Text
-      style={[{ fontSize: 14, fontWeight: "600" }, textStyle]}
-    >
+    <Text className="text-sm font-semibold" style={{ color: activeColor }}>
       LAST THIRD
-    </Animated.Text>
+    </Text>
     <Animated.Text
-      style={[{ fontSize: 18, fontWeight: "bold", marginTop: 4 }, textStyle]}
+      style={[
+        {
+          fontSize: 18,
+          fontWeight: "bold",
+          marginTop: 4,
+          opacity: isActive ? 1 : DIMMED_OPACITY,
+        },
+        textStyle,
+      ]}
     >
       {startTime}
     </Animated.Text>
@@ -105,12 +118,14 @@ export const LastThirdOfNight = React.memo(
       <CrossfadingLabel
         startTime={startTime}
         isActive={isActive}
+        activeColor={activeColor}
         color={color}
       />
     ) : (
       <LabelBody
         startTime={startTime}
         isActive={isActive}
+        activeColor={activeColor}
         textStyle={{ color }}
       />
     );
