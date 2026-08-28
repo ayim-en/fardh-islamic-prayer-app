@@ -165,6 +165,7 @@ export default function Index() {
         currentPrayer={currentPrayer?.prayer || null}
         primaryDateSystem={calendarSettings.primaryDateSystem}
         timeFormat={prayerSettings.timeFormat}
+        showLastThird={prayerSettings.showLastThird}
       />
     </View>
   );

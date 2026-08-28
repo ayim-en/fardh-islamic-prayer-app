@@ -11,7 +11,7 @@ import {
   TuneSettings,
 } from "@/constants/prayerSettings";
 import React, { useCallback, useEffect, useState } from "react";
-import { ScrollView, TouchableOpacity, View } from "react-native";
+import { ScrollView, Switch, TouchableOpacity, View } from "react-native";
 import Animated from "react-native-reanimated";
 
 interface PrayerTimesSettingsProps {
@@ -45,6 +45,9 @@ export const PrayerTimesSettings = ({
   const [localLatitude, setLocalLatitude] = useState(settings.latitudeAdjustmentMethod);
   const [localTune, setLocalTune] = useState<TuneSettings>(settings.tune);
   const [localTimeFormat, setLocalTimeFormat] = useState<TimeFormat>(settings.timeFormat);
+  const [localShowLastThird, setLocalShowLastThird] = useState(
+    settings.showLastThird
+  );
 
   // Sync local state when settings change externally (e.g., on mount or from another source)
   useEffect(() => {
@@ -53,6 +56,7 @@ export const PrayerTimesSettings = ({
     setLocalLatitude(settings.latitudeAdjustmentMethod);
     setLocalTune(settings.tune);
     setLocalTimeFormat(settings.timeFormat);
+    setLocalShowLastThird(settings.showLastThird);
   }, [settings]);
 
   // Check if any local state differs from saved settings
@@ -61,6 +65,7 @@ export const PrayerTimesSettings = ({
     localSchool !== settings.school ||
     localLatitude !== settings.latitudeAdjustmentMethod ||
     localTimeFormat !== settings.timeFormat ||
+    localShowLastThird !== settings.showLastThird ||
     TUNABLE_PRAYERS.some((p) => localTune[p.key] !== settings.tune[p.key]);
 
   // Update local tune value (doesn't save to storage)
@@ -80,6 +85,8 @@ export const PrayerTimesSettings = ({
       changes.latitudeAdjustmentMethod = localLatitude;
     if (localTimeFormat !== settings.timeFormat)
       changes.timeFormat = localTimeFormat;
+    if (localShowLastThird !== settings.showLastThird)
+      changes.showLastThird = localShowLastThird;
 
     const tuneChanged = TUNABLE_PRAYERS.some(
       (p) => localTune[p.key] !== settings.tune[p.key]
@@ -95,6 +102,7 @@ export const PrayerTimesSettings = ({
     localSchool,
     localLatitude,
     localTimeFormat,
+    localShowLastThird,
     localTune,
     settings,
     updateSettings,
@@ -108,6 +116,7 @@ export const PrayerTimesSettings = ({
     setLocalLatitude(settings.latitudeAdjustmentMethod);
     setLocalTune(settings.tune);
     setLocalTimeFormat(settings.timeFormat);
+    setLocalShowLastThird(settings.showLastThird);
   }, [settings]);
 
   return (
@@ -531,6 +540,33 @@ export const PrayerTimesSettings = ({
             })}
           </View>
         )}
+      </View>
+
+      <Animated.View
+        className="my-2"
+        style={[{ height: 1 }, animatedSeparatorStyle]}
+      />
+
+      {/* Last Third of the Night Toggle */}
+      <View className="flex-row items-center justify-between py-2">
+        <View className="flex-1 pr-3">
+          <Animated.Text
+            className="text-base font-medium"
+            style={animatedTextStyle}
+          >
+            Last Third of the Night
+          </Animated.Text>
+          <Animated.Text className="text-sm" style={animatedSecondaryTextStyle}>
+            Show when it begins, beside the date
+          </Animated.Text>
+        </View>
+        <Switch
+          value={localShowLastThird}
+          onValueChange={setLocalShowLastThird}
+          trackColor={{ false: colors.inactive, true: colors.active }}
+          thumbColor="#fff"
+          ios_backgroundColor={colors.inactive}
+        />
       </View>
 
       {/* Unified Save/Discard buttons */}

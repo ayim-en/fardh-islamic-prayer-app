@@ -104,6 +104,11 @@ export const DEFAULT_PRAYER_SETTINGS = {
   latitudeAdjustmentMethod: null as number | null,
   tune: DEFAULT_TUNE_SETTINGS,
   timeFormat: "24h" as TimeFormat,
+  // Whether the prayer screen shows the start of the last third of the night.
+  // On by default: it is the feature's only entry point, and a user who does
+  // not pray Tahajjud can turn it off. Stored blobs written before this
+  // existed simply take the default.
+  showLastThird: true,
 };
 
 export type PrayerSettings = typeof DEFAULT_PRAYER_SETTINGS;

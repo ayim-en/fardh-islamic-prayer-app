@@ -78,6 +78,7 @@ interface PrayerCarouselProps {
   currentPrayer: string | null;
   primaryDateSystem?: PrimaryDateSystem;
   timeFormat?: TimeFormat;
+  showLastThird?: boolean;
   containerHeight?: number;
 }
 
@@ -104,6 +105,7 @@ export const PrayerCarousel = forwardRef<
       currentPrayer,
       primaryDateSystem = "gregorian",
       timeFormat = "24h",
+      showLastThird = true,
       containerHeight,
     },
     ref
@@ -226,15 +228,17 @@ export const PrayerCarousel = forwardRef<
                         </Text>
                       )}
                     </View>
-                    <LastThirdOfNight
-                      isoDate={isoDate}
-                      maghribTime={dayPrayers.timings.Maghrib}
-                      nextFajrTime={nextDayPrayers?.timings.Fajr}
-                      timeFormat={timeFormat}
-                      activeColor={activeColor}
-                      secondaryColor={secondaryTextColor}
-                      isCurrentPage={index === currentPage}
-                    />
+                    {showLastThird && (
+                      <LastThirdOfNight
+                        isoDate={isoDate}
+                        maghribTime={dayPrayers.timings.Maghrib}
+                        nextFajrTime={nextDayPrayers?.timings.Fajr}
+                        timeFormat={timeFormat}
+                        activeColor={activeColor}
+                        secondaryColor={secondaryTextColor}
+                        isCurrentPage={index === currentPage}
+                      />
+                    )}
                   </View>
 
                   <ScrollView
