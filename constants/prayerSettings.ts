@@ -97,6 +97,19 @@ export const TIME_FORMATS: { id: TimeFormat; name: string; example: string }[] =
   { id: "24h", name: "24-hour", example: "17:30" },
 ];
 
+// Shown beside the Last Third of the Night setting as a sample of the label the
+// prayer screen draws, so the setting is recognisable before it is turned on.
+export const LAST_THIRD_EXAMPLE = "LAST THIRD: 01:28";
+
+export const LAST_THIRD_OPTIONS: {
+  id: boolean;
+  name: string;
+  description: string;
+}[] = [
+  { id: true, name: "Show", description: "Beside the date on the prayer screen" },
+  { id: false, name: "Hide", description: "Prayer screen shows the date only" },
+];
+
 // Default settings
 export const DEFAULT_PRAYER_SETTINGS = {
   method: 2, // ISNA

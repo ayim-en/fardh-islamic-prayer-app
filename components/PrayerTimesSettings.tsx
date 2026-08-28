@@ -1,6 +1,8 @@
 import { AnimatedTintIcon } from "@/components/AnimatedTintIcon";
 import {
   CALCULATION_METHODS,
+  LAST_THIRD_EXAMPLE,
+  LAST_THIRD_OPTIONS,
   LATITUDE_ADJUSTMENTS,
   PrayerSettings,
   SCHOOLS,
@@ -11,7 +13,7 @@ import {
   TuneSettings,
 } from "@/constants/prayerSettings";
 import React, { useCallback, useEffect, useState } from "react";
-import { ScrollView, Switch, TouchableOpacity, View } from "react-native";
+import { ScrollView, TouchableOpacity, View } from "react-native";
 import Animated from "react-native-reanimated";
 
 interface PrayerTimesSettingsProps {
@@ -547,26 +549,76 @@ export const PrayerTimesSettings = ({
         style={[{ height: 1 }, animatedSeparatorStyle]}
       />
 
-      {/* Last Third of the Night Toggle */}
-      <View className="flex-row items-center justify-between py-2">
-        <View className="flex-1 pr-3">
-          <Animated.Text
-            className="text-base font-medium"
-            style={animatedTextStyle}
+      {/* Last Third of the Night Dropdown */}
+      <View>
+        <TouchableOpacity
+          onPress={() => togglePicker("lastThird")}
+          className="flex-row items-center py-2"
+        >
+          <View className="flex-1">
+            <Animated.Text
+              className="text-base font-medium"
+              style={animatedTextStyle}
+            >
+              Last Third of the Night
+            </Animated.Text>
+            <Animated.Text className="text-sm" style={animatedActiveTextStyle}>
+              {LAST_THIRD_EXAMPLE}
+            </Animated.Text>
+          </View>
+          <Animated.View
+            style={{
+              transform: [
+                {
+                  rotate: expandedPickers.has("lastThird") ? "180deg" : "0deg",
+                },
+              ],
+            }}
           >
-            Last Third of the Night
-          </Animated.Text>
-          <Animated.Text className="text-sm" style={animatedSecondaryTextStyle}>
-            Show when it begins, beside the date
-          </Animated.Text>
-        </View>
-        <Switch
-          value={localShowLastThird}
-          onValueChange={setLocalShowLastThird}
-          trackColor={{ false: colors.inactive, true: colors.active }}
-          thumbColor="#fff"
-          ios_backgroundColor={colors.inactive}
-        />
+            <AnimatedTintIcon
+              source={require("../assets/images/prayer-pro-icons/settings-tab/settings-dropdown.png")}
+              size={16}
+              tintColor={colors.active}
+            />
+          </Animated.View>
+        </TouchableOpacity>
+        {expandedPickers.has("lastThird") && (
+          <View className="mt-1">
+            {LAST_THIRD_OPTIONS.map((option) => {
+              const isSelected = localShowLastThird === option.id;
+              return (
+                <TouchableOpacity
+                  key={option.name}
+                  onPress={() => setLocalShowLastThird(option.id)}
+                  className="flex-row items-center py-2 pl-4"
+                >
+                  <View className="flex-1">
+                    <Animated.Text
+                      style={
+                        isSelected
+                          ? animatedActiveTextStyle
+                          : animatedSecondaryTextStyle
+                      }
+                    >
+                      {option.name}
+                    </Animated.Text>
+                    <Animated.Text
+                      className="text-xs"
+                      style={animatedSecondaryTextStyle}
+                    >
+                      {option.description}
+                    </Animated.Text>
+                  </View>
+                  {isSelected && (
+                    <Animated.Text style={animatedActiveTextStyle}>
+                      ✓
+                    </Animated.Text>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
       </View>
 
       {/* Unified Save/Discard buttons */}
