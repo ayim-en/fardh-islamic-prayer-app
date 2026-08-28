@@ -1,4 +1,4 @@
-import { CarouselDateFormat } from "@/constants/calendarSettings";
+import { PrimaryDateSystem } from "@/constants/calendarSettings";
 import {
   HOME_HEADER_HEIGHT_RATIO,
   Prayers,
@@ -14,6 +14,7 @@ import {
 } from "@/hooks/useAnimatedColor";
 import { NotificationState } from "@/hooks/useNotifications";
 import { PrayerDict } from "@/prayer-api/prayerTimesAPI";
+import { resolveDateLabels } from "@/utils/dateSystemHelpers";
 import {
   formatDate,
   formatHijriDateShort,
@@ -73,7 +74,7 @@ interface PrayerCarouselProps {
   activeColor: string;
   inactiveColor: string;
   currentPrayer: string | null;
-  dateFormat?: CarouselDateFormat;
+  primaryDateSystem?: PrimaryDateSystem;
   timeFormat?: TimeFormat;
   containerHeight?: number;
 }
@@ -99,7 +100,7 @@ export const PrayerCarousel = forwardRef<
       activeColor,
       inactiveColor,
       currentPrayer,
-      dateFormat = "gregorian",
+      primaryDateSystem = "gregorian",
       timeFormat = "24h",
       containerHeight,
     },
@@ -194,9 +195,18 @@ export const PrayerCarousel = forwardRef<
                           animatedTextStyle,
                         ]}
                       >
-                        {dateFormat === "hijri"
-                          ? formatHijriDateShort(dayPrayers.hijriDate, isoDate)
-                          : formatDate(isoDate)}
+                        {
+                          // The prayer screen shows exactly one date: the
+                          // primary. The trailing label is the calendar's
+                          // business, not this screen's.
+                          resolveDateLabels(primaryDateSystem, {
+                            gregorian: formatDate(isoDate),
+                            hijri: formatHijriDateShort(
+                              dayPrayers.hijriDate,
+                              isoDate
+                            ),
+                          }).leading
+                        }
                       </Animated.Text>
                       {isToday && (
                         <Text

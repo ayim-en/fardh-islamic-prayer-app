@@ -1,8 +1,15 @@
 import { AnimatedTintIcon } from "@/components/AnimatedTintIcon";
-import { CALENDAR_METHODS, CalendarMethodId, CalendarSettings as CalendarSettingsType } from "@/constants/calendarSettings";
+import { CALENDAR_METHODS, CalendarMethodId, CalendarSettings as CalendarSettingsType, PrimaryDateSystem } from "@/constants/calendarSettings";
 import React, { useCallback, useEffect, useState } from "react";
 import { TouchableOpacity, View } from "react-native";
 import Animated from "react-native-reanimated";
+
+// The two date systems, in the order they are offered. Gregorian leads because
+// it is the default; the setting changes only which one is primary.
+const DATE_SYSTEMS: { id: PrimaryDateSystem; name: string }[] = [
+  { id: "gregorian", name: "Gregorian" },
+  { id: "hijri", name: "Hijri" },
+];
 
 interface CalendarSettingsProps {
   settings: CalendarSettingsType;
@@ -29,7 +36,7 @@ export const CalendarSettingsComponent = ({
 }: CalendarSettingsProps) => {
   // Local state for all settings (changes are batched until Save)
   const [localCalendarMethod, setLocalCalendarMethod] = useState<CalendarMethodId>(settings.calendarMethod);
-  const [localDateFormat, setLocalDateFormat] = useState<"gregorian" | "hijri">(settings.carouselDateFormat);
+  const [localPrimaryDateSystem, setLocalPrimaryDateSystem] = useState<PrimaryDateSystem>(settings.primaryDateSystem);
   const [localAdjustment, setLocalAdjustment] = useState(settings.adjustment);
 
   const isMathematical = localCalendarMethod === "MATHEMATICAL";
@@ -37,14 +44,14 @@ export const CalendarSettingsComponent = ({
   // Sync local state when settings change externally
   useEffect(() => {
     setLocalCalendarMethod(settings.calendarMethod);
-    setLocalDateFormat(settings.carouselDateFormat);
+    setLocalPrimaryDateSystem(settings.primaryDateSystem);
     setLocalAdjustment(settings.adjustment);
   }, [settings]);
 
   // Check if any local state differs from saved settings
   const hasUnsavedChanges =
     localCalendarMethod !== settings.calendarMethod ||
-    localDateFormat !== settings.carouselDateFormat ||
+    localPrimaryDateSystem !== settings.primaryDateSystem ||
     (isMathematical && localAdjustment !== settings.adjustment);
 
   // Save all changes at once
@@ -52,20 +59,20 @@ export const CalendarSettingsComponent = ({
     const changes: Partial<CalendarSettingsType> = {};
     if (localCalendarMethod !== settings.calendarMethod)
       changes.calendarMethod = localCalendarMethod;
-    if (localDateFormat !== settings.carouselDateFormat)
-      changes.carouselDateFormat = localDateFormat;
+    if (localPrimaryDateSystem !== settings.primaryDateSystem)
+      changes.primaryDateSystem = localPrimaryDateSystem;
     if (isMathematical && localAdjustment !== settings.adjustment)
       changes.adjustment = localAdjustment;
 
     if (Object.keys(changes).length > 0) {
       await updateSettings(changes);
     }
-  }, [localCalendarMethod, localDateFormat, localAdjustment, isMathematical, settings, updateSettings]);
+  }, [localCalendarMethod, localPrimaryDateSystem, localAdjustment, isMathematical, settings, updateSettings]);
 
   // Discard all changes
   const discardAllChanges = useCallback(() => {
     setLocalCalendarMethod(settings.calendarMethod);
-    setLocalDateFormat(settings.carouselDateFormat);
+    setLocalPrimaryDateSystem(settings.primaryDateSystem);
     setLocalAdjustment(settings.adjustment);
   }, [settings]);
 
@@ -147,10 +154,11 @@ export const CalendarSettingsComponent = ({
 
       <Animated.View className="my-2" style={[{ height: 1 }, animatedSeparatorStyle]} />
 
-      {/* Date Format Toggle */}
+      {/* Primary Date System Toggle. Lives under Calendar settings even though
+          it also governs the prayer screen's date — see ADR-0001. */}
       <View>
         <TouchableOpacity
-          onPress={() => togglePicker("dateFormat")}
+          onPress={() => togglePicker("primaryDateSystem")}
           className="flex-row items-center py-2"
         >
           <View className="flex-1">
@@ -158,20 +166,20 @@ export const CalendarSettingsComponent = ({
               className="text-base font-medium"
               style={animatedTextStyle}
             >
-              Date Format
+              Primary Date System
             </Animated.Text>
             <Animated.Text
               className="text-sm"
               style={animatedActiveTextStyle}
             >
-              {localDateFormat === "hijri" ? "Hijri" : "Gregorian"}
+              {localPrimaryDateSystem === "hijri" ? "Hijri" : "Gregorian"}
             </Animated.Text>
           </View>
           <Animated.View
             style={{
               transform: [
                 {
-                  rotate: expandedPickers.has("dateFormat")
+                  rotate: expandedPickers.has("primaryDateSystem")
                     ? "180deg"
                     : "0deg",
                 },
@@ -185,24 +193,21 @@ export const CalendarSettingsComponent = ({
             />
           </Animated.View>
         </TouchableOpacity>
-        {expandedPickers.has("dateFormat") && (
+        {expandedPickers.has("primaryDateSystem") && (
           <View className="mt-1">
-            {[
-              { id: "gregorian", name: "Gregorian" },
-              { id: "hijri", name: "Hijri" },
-            ].map((format) => {
-              const isSelected = localDateFormat === format.id;
+            {DATE_SYSTEMS.map((system) => {
+              const isSelected = localPrimaryDateSystem === system.id;
               return (
                 <TouchableOpacity
-                  key={format.id}
-                  onPress={() => setLocalDateFormat(format.id as "gregorian" | "hijri")}
+                  key={system.id}
+                  onPress={() => setLocalPrimaryDateSystem(system.id)}
                   className="flex-row items-center py-2 pl-4"
                 >
                   <Animated.Text
                     className="flex-1"
                     style={isSelected ? animatedActiveTextStyle : animatedSecondaryTextStyle}
                   >
-                    {format.name}
+                    {system.name}
                   </Animated.Text>
                   {isSelected && (
                     <Animated.Text style={animatedActiveTextStyle}>

@@ -29,11 +29,11 @@ describe("saveCalendarSettings", () => {
     const io = spyIO();
     const saved = await saveCalendarSettings(
       settings({ calendarMethod: "HJCoSA" }),
-      { carouselDateFormat: "hijri" },
+      { primaryDateSystem: "hijri" },
       io
     );
     expect(saved).toEqual(
-      settings({ calendarMethod: "HJCoSA", carouselDateFormat: "hijri" })
+      settings({ calendarMethod: "HJCoSA", primaryDateSystem: "hijri" })
     );
   });
 
@@ -51,7 +51,7 @@ describe("saveCalendarSettings", () => {
 
   it("leaves the cache alone when only the primary date system changes", async () => {
     const io = spyIO();
-    await saveCalendarSettings(settings(), { carouselDateFormat: "hijri" }, io);
+    await saveCalendarSettings(settings(), { primaryDateSystem: "hijri" }, io);
     expect(io.clearCache).not.toHaveBeenCalled();
   });
 
@@ -100,7 +100,7 @@ describe("saveCalendarSettings", () => {
     const io = spyIO();
     await saveCalendarSettings(
       settings({ calendarMethod: "HJCoSA", adjustment: 2 }),
-      { carouselDateFormat: "hijri" },
+      { primaryDateSystem: "hijri" },
       io
     );
     expect(io.clearCache).toHaveBeenCalled();

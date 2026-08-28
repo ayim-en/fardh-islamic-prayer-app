@@ -163,7 +163,7 @@ export default function Index() {
             : "#8398a3"
         }
         currentPrayer={currentPrayer?.prayer || null}
-        dateFormat={calendarSettings.carouselDateFormat}
+        primaryDateSystem={calendarSettings.primaryDateSystem}
         timeFormat={prayerSettings.timeFormat}
       />
     </View>

@@ -53,8 +53,8 @@ describe("invalidatesCalendarCache", () => {
   it("keeps the cache when only the primary date system changes", () => {
     expect(
       invalidatesCalendarCache(
-        settings({ carouselDateFormat: "gregorian" }),
-        settings({ carouselDateFormat: "hijri" })
+        settings({ primaryDateSystem: "gregorian" }),
+        settings({ primaryDateSystem: "hijri" })
       )
     ).toBe(false);
   });
@@ -71,8 +71,8 @@ describe("invalidatesCalendarCache", () => {
   it("clears the cache when a cosmetic change accompanies an invalidating one", () => {
     expect(
       invalidatesCalendarCache(
-        settings({ calendarMethod: "HJCoSA", carouselDateFormat: "gregorian" }),
-        settings({ calendarMethod: "DIYANET", carouselDateFormat: "hijri" })
+        settings({ calendarMethod: "HJCoSA", primaryDateSystem: "gregorian" }),
+        settings({ calendarMethod: "DIYANET", primaryDateSystem: "hijri" })
       )
     ).toBe(true);
   });
