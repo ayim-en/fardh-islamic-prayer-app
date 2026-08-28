@@ -177,7 +177,7 @@ export const PrayerCarousel = forwardRef<
             itemSpacings={itemSpacing}
             initialPage={todayIndex}
           >
-            {sortedDates.map((isoDate) => {
+            {sortedDates.map((isoDate, index) => {
               const dayPrayers = prayerDict[isoDate];
               const isToday = isoDate === todayISO;
               // The night begun on this page runs into the next day, so its
@@ -233,6 +233,7 @@ export const PrayerCarousel = forwardRef<
                       timeFormat={timeFormat}
                       activeColor={activeColor}
                       secondaryColor={secondaryTextColor}
+                      isCurrentPage={index === currentPage}
                     />
                   </View>
 
