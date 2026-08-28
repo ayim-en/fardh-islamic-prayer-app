@@ -1,6 +1,10 @@
 import { Prayers } from "@/constants/prayers";
 import { PrayerDict } from "@/prayer-api/prayerTimesAPI";
-import { getLocalISODate } from "@/utils/calendarHelpers";
+import {
+  getLocalISODate,
+  getNextISODate,
+  isISODate,
+} from "@/utils/calendarHelpers";
 
 // Hijri month names
 const HIJRI_MONTHS = [
@@ -117,6 +121,76 @@ export const parsePrayerTime = (isoDate: string, timeString: string): Date => {
   const [hours, minutes] = cleanTime.split(":").map(Number);
   const [year, month, day] = isoDate.split("-").map(Number);
   return new Date(year, month - 1, day, hours, minutes, 0);
+};
+
+// The last third of the night, as the moment it opens and the moment it closes.
+// The closing moment is Fajr; it travels with the start so callers can tell
+// whether the current time falls inside the window without redoing the
+// arithmetic that produced it.
+export type LastThirdWindow = { start: Date; end: Date };
+
+const MINUTE_MS = 60 * 1000;
+
+// Parses a prayer time onto an ISO date, returning null rather than an invalid
+// or silently rolled-over Date when the date or the time is unusable. Guards
+// the input, then leaves the parsing itself to parsePrayerTime.
+const parseTimeOnDate = (isoDate: string, timeString: string): Date | null => {
+  if (!isISODate(isoDate)) return null;
+
+  const [hours, minutes] = cleanTimeString(timeString ?? "")
+    .split(":")
+    .map(Number);
+  // An out-of-range clock time would roll into a neighbouring day rather than
+  // fail, which would put the window on the wrong night.
+  const inRange = (value: number, max: number) =>
+    Number.isInteger(value) && value >= 0 && value <= max;
+  if (!inRange(hours, 23) || !inRange(minutes, 59)) return null;
+
+  return parsePrayerTime(isoDate, timeString);
+};
+
+// The last third of the night for the night beginning on `isoDate`: the final
+// third of the interval from that day's Maghrib to the following day's Fajr.
+// The night is divided from Maghrib, not from Isha.
+//
+// Fajr falls on the day after Maghrib, so the two times never share a date and
+// the caller passes only the Maghrib date. The start is floored to the whole
+// minute it is displayed as, so the moment the label reads is the moment the
+// window opens. Returns null when either time is missing or unusable, or when
+// the night has no length.
+export const getLastThirdOfNight = (
+  isoDate: string,
+  maghribTime: string,
+  nextFajrTime: string | undefined
+): LastThirdWindow | null => {
+  const maghrib = parseTimeOnDate(isoDate, maghribTime);
+  const fajr = parseTimeOnDate(getNextISODate(isoDate), nextFajrTime ?? "");
+  if (!maghrib || !fajr) return null;
+
+  const nightMs = fajr.getTime() - maghrib.getTime();
+  if (nightMs <= 0) return null;
+
+  const startMs = maghrib.getTime() + (nightMs * 2) / 3;
+  return {
+    start: new Date(Math.floor(startMs / MINUTE_MS) * MINUTE_MS),
+    end: fajr,
+  };
+};
+
+// Whether the given moment falls inside the last third. The window is open
+// from its start up to but not including Fajr.
+export const isWithinLastThird = (
+  window: LastThirdWindow | null,
+  now: Date
+): boolean =>
+  window !== null && now >= window.start && now < window.end;
+
+// Renders a Date as a 24-hour "HH:MM" clock time, the shape the time-format
+// preference formatter consumes.
+export const formatClockTime = (date: Date): string => {
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${hours}:${minutes}`;
 };
 
 // Converts prayer time to minutes for comparison

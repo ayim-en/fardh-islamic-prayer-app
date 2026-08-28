@@ -16,6 +16,21 @@ export const getLocalISODate = (date: Date): string => {
   return `${y}-${m}-${d}`;
 };
 
+// Whether a string has the ISO date shape (YYYY-MM-DD) the prayer and calendar
+// dictionaries are keyed by.
+export const isISODate = (value: string): boolean =>
+  /^\d{4}-\d{2}-\d{2}$/.test(value ?? '');
+
+// Get the ISO date (YYYY-MM-DD) of the day after the given one. Returns empty
+// for anything that isn't an ISO date, so a caller looking the result up in a
+// dictionary simply misses rather than keying off an invalid date.
+export const getNextISODate = (isoDate: string): string => {
+  if (!isISODate(isoDate)) return '';
+  const [year, month, day] = isoDate.split('-').map(Number);
+  // Day overflow rolls the Date into the next month or year for us.
+  return getLocalISODate(new Date(year, month - 1, day + 1));
+};
+
 // Get the current local date as ISO string (YYYY-MM-DD)
 export const getTodayISO = (): string => {
   return getLocalISODate(new Date());

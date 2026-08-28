@@ -14,6 +14,7 @@ import {
 } from "@/hooks/useAnimatedColor";
 import { NotificationState } from "@/hooks/useNotifications";
 import { PrayerDict } from "@/prayer-api/prayerTimesAPI";
+import { getNextISODate } from "@/utils/calendarHelpers";
 import { resolveDateLabels } from "@/utils/dateSystemHelpers";
 import {
   formatDate,
@@ -39,6 +40,7 @@ import {
 import Animated from "react-native-reanimated";
 import { Carousel } from "react-native-ui-lib";
 import { AnimatedTintIcon } from "./AnimatedTintIcon";
+import { LastThirdOfNight } from "./LastThirdOfNight";
 
 // Notification icons for each state
 const NOTIFICATION_ICONS = {
@@ -178,6 +180,9 @@ export const PrayerCarousel = forwardRef<
             {sortedDates.map((isoDate) => {
               const dayPrayers = prayerDict[isoDate];
               const isToday = isoDate === todayISO;
+              // The night begun on this page runs into the next day, so its
+              // Fajr belongs to that day's record. Absent on the last page.
+              const nextDayPrayers = prayerDict[getNextISODate(isoDate)];
 
               return (
                 <View
@@ -185,8 +190,12 @@ export const PrayerCarousel = forwardRef<
                   className="w-full h-full rounded-xl justify-start"
                 >
                   <View className="mb-2 flex-row justify-between items-start">
-                    <View>
+                    {/* Shrinks so a long Hijri weekday cannot push the last
+                        third of the night off the edge of the page. */}
+                    <View className="flex-1 pr-3">
                       <Animated.Text
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
                         style={[
                           {
                             fontSize: 18,
@@ -217,6 +226,14 @@ export const PrayerCarousel = forwardRef<
                         </Text>
                       )}
                     </View>
+                    <LastThirdOfNight
+                      isoDate={isoDate}
+                      maghribTime={dayPrayers.timings.Maghrib}
+                      nextFajrTime={nextDayPrayers?.timings.Fajr}
+                      timeFormat={timeFormat}
+                      activeColor={activeColor}
+                      secondaryColor={secondaryTextColor}
+                    />
                   </View>
 
                   <ScrollView
