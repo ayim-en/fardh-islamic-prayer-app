@@ -22,10 +22,9 @@ type LabelBodyProps = {
   textStyle: StyleProp<TextStyle>;
 };
 
-// The caption sits above the time and is styled exactly as the TODAY badge
-// opposite it — same size, weight and accent colour — so the two sides of the
-// date row read as a pair. Being a fixed label rather than a value, it does
-// not dim: the time below it carries whether the window is open.
+// The caption sits above the time and takes the TODAY badge's colour, size and
+// weight, so the two sides of the date row read as a pair. Caption and time dim
+// together as one block while the window is shut.
 const LabelBody = ({
   startTime,
   isActive,
@@ -34,6 +33,7 @@ const LabelBody = ({
 }: LabelBodyProps) => (
   <View
     className="items-end"
+    style={{ opacity: isActive ? 1 : DIMMED_OPACITY }}
     // Read as one phrase carrying the full term, rather than as an
     // abbreviated label followed by a bare time.
     accessible
@@ -43,15 +43,7 @@ const LabelBody = ({
       LAST THIRD
     </Text>
     <Animated.Text
-      style={[
-        {
-          fontSize: 18,
-          fontWeight: "bold",
-          marginTop: 4,
-          opacity: isActive ? 1 : DIMMED_OPACITY,
-        },
-        textStyle,
-      ]}
+      style={[{ fontSize: 18, fontWeight: "bold", marginTop: 4 }, textStyle]}
     >
       {startTime}
     </Animated.Text>
