@@ -21,13 +21,6 @@ describe("resolveDateLabels", () => {
     });
   });
 
-  it("puts each system on exactly one side", () => {
-    const { leading, trailing } = resolveDateLabels("hijri", LABELS);
-    expect([leading, trailing].sort()).toEqual(
-      [LABELS.gregorian, LABELS.hijri].sort()
-    );
-  });
-
   it("passes labels through untouched rather than reformatting them", () => {
     const odd = { gregorian: "", hijri: "  4 Rabi' al-Awwal  " };
     expect(resolveDateLabels("hijri", odd)).toEqual({

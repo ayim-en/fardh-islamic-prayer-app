@@ -172,7 +172,7 @@ export const CalendarSettingsComponent = ({
               className="text-sm"
               style={animatedActiveTextStyle}
             >
-              {localPrimaryDateSystem === "hijri" ? "Hijri" : "Gregorian"}
+              {DATE_SYSTEMS.find((s) => s.id === localPrimaryDateSystem)?.name}
             </Animated.Text>
           </View>
           <Animated.View

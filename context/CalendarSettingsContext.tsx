@@ -34,6 +34,10 @@ export const CalendarSettingsProvider: React.FC<{
         const stored = await AsyncStorage.getItem(STORAGE_KEY);
         if (stored) {
           const parsed = JSON.parse(stored);
+          // No migration shim, by decision (#6): a blob written before
+          // `carouselDateFormat` became `primaryDateSystem` simply falls back
+          // to the Gregorian default, and the dead key rides along harmlessly.
+          // The installed base is small enough that a reset is acceptable.
           setSettings({
             ...DEFAULT_CALENDAR_SETTINGS,
             ...parsed,

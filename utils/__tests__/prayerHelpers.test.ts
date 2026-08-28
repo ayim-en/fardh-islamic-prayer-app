@@ -1,4 +1,5 @@
 import {
+  formatHijriDateShort,
   formatTimeWithPreference,
   getCurrentPrayerFromDay,
 } from "@/utils/prayerHelpers";
@@ -62,5 +63,31 @@ describe("getCurrentPrayerFromDay", () => {
       Object.entries(DAY).map(([prayer, time]) => [prayer, `${time} (GMT)`])
     ) as typeof DAY;
     expect(getCurrentPrayerFromDay(suffixed, at(18, 30))).toBe("Maghrib");
+  });
+});
+
+describe("formatHijriDateShort", () => {
+  it("renders the day and month name", () => {
+    expect(formatHijriDateShort("09-07-1447")).toBe("9 Rajab");
+  });
+
+  it("prefixes the Hijri weekday when given the ISO date", () => {
+    // 2026-08-27 is a Thursday.
+    expect(formatHijriDateShort("09-07-1447", "2026-08-27")).toBe(
+      "Al-Khamis, 9 Rajab"
+    );
+  });
+
+  it("falls back to Unknown for an out-of-range month", () => {
+    expect(formatHijriDateShort("09-13-1447")).toBe("9 Unknown");
+  });
+
+  // Both systems are formatted on every render now, so a missing Hijri date
+  // would otherwise throw for Gregorian users who never see the value.
+  it("returns empty rather than throwing when the date is missing", () => {
+    expect(formatHijriDateShort("")).toBe("");
+    expect(
+      formatHijriDateShort(undefined as unknown as string, "2026-08-27")
+    ).toBe("");
   });
 });

@@ -32,6 +32,12 @@ const HIJRI_WEEKDAYS = [
 // Formats Hijri DD-MM-YYYY date string to "Al-Ithnayn, 9 Rajab" format
 // Optionally accepts ISO date to include weekday
 export const formatHijriDateShort = (hijriDate: string, isoDate?: string): string => {
+  // Both date systems are now formatted on every render regardless of which
+  // one leads, so a day whose cached record is missing its Hijri date must not
+  // take the prayer screen down with it — including for Gregorian users, who
+  // never see this value.
+  if (!hijriDate) return "";
+
   const [dayStr, monthStr] = hijriDate.split("-");
   const day = Number(dayStr);
   const monthIndex = Number(monthStr) - 1;
