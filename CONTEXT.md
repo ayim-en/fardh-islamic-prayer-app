@@ -15,3 +15,15 @@ _Avoid_: date format, calendar format, date display mode
 **Last third of the night**:
 The final third of the interval from Maghrib to Fajr. The night is divided from Maghrib, not from Isha.
 _Avoid_: tahajjud time, qiyam time, last third of the day
+
+**Widget payload**:
+What the app writes to app-group storage for the widget to read: a contiguous run of days of prayer times starting today, an expiry, and the colours and formats the widget renders with. The widget never fetches, so the payload is the whole of what it knows.
+_Avoid_: widget data, widget cache, widget blob
+
+**Widget window**:
+How far ahead a widget payload reaches: thirty days, or as much of that as there are prayer times for without a gap. Unrelated to the ten days notifications are scheduled for — see ADR-0002.
+_Avoid_: widget range, cache window
+
+**Expiry**:
+The first date a widget payload does not cover, stamped in by the app. From that date the widget shows placeholder times and an instruction to open the app, rather than the last day it happens to hold.
+_Avoid_: staleness date, cache TTL, expiration date

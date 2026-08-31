@@ -10,9 +10,8 @@ import { useThemeColors } from "@/context/ThemeContext";
 import { useAnimatedBackgroundColor } from "@/hooks/useAnimatedColor";
 import { useLocation } from "@/hooks/useLocation";
 import { usePrayerTimes } from "@/hooks/usePrayerTimes";
-import { getLocalISODate } from "@/utils/calendarHelpers";
-import { cleanTimeString } from "@/utils/prayerHelpers";
-import { DayPrayerTimes, updateWidgetPrayerTimes } from "@/utils/widgetStorage";
+import { buildWidgetDays, widgetExpiryDate } from "@/utils/widgetPayload";
+import { updateWidgetPrayerTimes } from "@/utils/widgetStorage";
 import { Tabs } from "expo-router";
 import React, { useEffect } from "react";
 import Animated from "react-native-reanimated";
@@ -40,7 +39,7 @@ export default function TabLayout() {
     useThemeColors();
   const { settings: prayerSettings } = usePrayerSettings();
   const { location, locationName } = useLocation();
-  const { currentPrayer, prayerDict, todayISO } = usePrayerTimes(location);
+  const { currentPrayer, prayerDict } = usePrayerTimes(location);
 
   // isDarkMode from context already falls back to system color scheme
   const bgColor = isDarkMode
@@ -73,32 +72,14 @@ export default function TabLayout() {
     }
   }, [currentPrayer, setColors, themePrayer]);
 
-  // Sync prayer times with iOS widget (7 days of data for timeline)
+  // Sync prayer times with iOS widget. The widget cannot fetch anything itself,
+  // so every visit to the app refills its window and pushes the expiry out.
   useEffect(() => {
-    const todayPrayers = prayerDict[todayISO];
-    if (todayPrayers?.timings) {
-      // Extract 7 days of prayer times starting from today
-      const days: DayPrayerTimes[] = [];
-      for (let i = 0; i < 7; i++) {
-        const date = new Date();
-        date.setDate(date.getDate() + i);
-        const isoDate = getLocalISODate(date);
-        const dayData = prayerDict[isoDate];
-        if (dayData?.timings) {
-          days.push({
-            date: isoDate,
-            fajr: cleanTimeString(dayData.timings.Fajr),
-            sunrise: cleanTimeString(dayData.timings.Sunrise),
-            dhuhr: cleanTimeString(dayData.timings.Dhuhr),
-            asr: cleanTimeString(dayData.timings.Asr),
-            maghrib: cleanTimeString(dayData.timings.Maghrib),
-            isha: cleanTimeString(dayData.timings.Isha),
-          });
-        }
-      }
-
+    const days = buildWidgetDays(prayerDict, new Date());
+    if (days.length > 0) {
       updateWidgetPrayerTimes({
         days,
+        expiresOn: widgetExpiryDate(days),
         currentPrayer: currentPrayer?.prayer || null,
         locationName: locationName || null,
         lastUpdated: new Date().toISOString(),
@@ -110,7 +91,6 @@ export default function TabLayout() {
     }
   }, [
     prayerDict,
-    todayISO,
     currentPrayer,
     locationName,
     colors,

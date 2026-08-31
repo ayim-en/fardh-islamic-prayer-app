@@ -19,7 +19,7 @@ struct DayPrayerTimes: Codable {
 }
 
 struct PrayerData: Codable {
-    let days: [DayPrayerTimes] // 7 days of prayer times
+    let days: [DayPrayerTimes] // A contiguous run of days starting the day it was written
     let currentPrayer: String?
     let locationName: String?
     let lastUpdated: String?
@@ -30,6 +30,64 @@ struct PrayerData: Codable {
     let themePrayer: String?
     // Time format preference
     let timeFormat: String?
+    // ISO date of the first day `days` does not cover, stamped by the app
+    let expiresOn: String?
+
+    static let placeholderTime = "--:--"
+    static let expiredNotice = "Open app to refresh"
+
+    // Parses and prints the ISO dates the payload is keyed and stamped with.
+    static let isoFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
+
+    static let placeholderDay = DayPrayerTimes(
+        date: "",
+        fajr: placeholderTime,
+        sunrise: placeholderTime,
+        dhuhr: placeholderTime,
+        asr: placeholderTime,
+        maghrib: placeholderTime,
+        isha: placeholderTime
+    )
+
+    // Whether the cached window has lapsed. The app decides where the window
+    // ends and writes that date into the payload — the rule lives in
+    // utils/widgetPayload.ts, where it is tested. All the widget does is
+    // compare; ISO dates order lexicographically, so no arithmetic is needed.
+    // A payload with no expiry was written before the app stamped them: its
+    // age is unknowable, so it is expired by definition.
+    func isExpired(on todayISO: String) -> Bool {
+        guard let expiresOn, Self.isoFormatter.date(from: expiresOn) != nil else { return true }
+        return todayISO >= expiresOn
+    }
+
+    // The same payload showing a different slice of days. Everything else is
+    // carried across, so a new field on PrayerData isn't a new edit in each of
+    // the places one payload is rebuilt from another.
+    func with(days: [DayPrayerTimes], currentPrayer: String?) -> PrayerData {
+        PrayerData(
+            days: days,
+            currentPrayer: currentPrayer,
+            locationName: locationName,
+            lastUpdated: lastUpdated,
+            accentColor: accentColor,
+            isDarkMode: isDarkMode,
+            themePrayer: themePrayer,
+            timeFormat: timeFormat,
+            expiresOn: expiresOn
+        )
+    }
+
+    // The same payload with every prayer time replaced by a placeholder and
+    // nothing marked current. The app's colours are kept so the widget still
+    // looks like itself while it says it cannot be trusted.
+    func expired() -> PrayerData {
+        with(days: [Self.placeholderDay], currentPrayer: nil)
+    }
 
     // Helper to get today's prayers (first day in array)
     var todayPrayers: DayPrayerTimes? {
@@ -37,12 +95,12 @@ struct PrayerData: Codable {
     }
 
     // Convenience accessors for today's times (for backwards compatibility with views)
-    var fajr: String { todayPrayers?.fajr ?? "--:--" }
-    var sunrise: String { todayPrayers?.sunrise ?? "--:--" }
-    var dhuhr: String { todayPrayers?.dhuhr ?? "--:--" }
-    var asr: String { todayPrayers?.asr ?? "--:--" }
-    var maghrib: String { todayPrayers?.maghrib ?? "--:--" }
-    var isha: String { todayPrayers?.isha ?? "--:--" }
+    var fajr: String { todayPrayers?.fajr ?? Self.placeholderTime }
+    var sunrise: String { todayPrayers?.sunrise ?? Self.placeholderTime }
+    var dhuhr: String { todayPrayers?.dhuhr ?? Self.placeholderTime }
+    var asr: String { todayPrayers?.asr ?? Self.placeholderTime }
+    var maghrib: String { todayPrayers?.maghrib ?? Self.placeholderTime }
+    var isha: String { todayPrayers?.isha ?? Self.placeholderTime }
 
     // Helper to get tomorrow's fajr (for next prayer display after Isha)
     var tomorrowFajr: String? {
@@ -73,22 +131,15 @@ struct PrayerTimelineProvider: TimelineProvider {
     let appGroupId = "group.com.ayimen.fardh"
 
     private static let defaultPrayerData = PrayerData(
-        days: [DayPrayerTimes(
-            date: "",
-            fajr: "--:--",
-            sunrise: "--:--",
-            dhuhr: "--:--",
-            asr: "--:--",
-            maghrib: "--:--",
-            isha: "--:--"
-        )],
+        days: [PrayerData.placeholderDay],
         currentPrayer: nil,
         locationName: "Open app to sync",
         lastUpdated: nil,
         accentColor: nil,
         isDarkMode: nil,
         themePrayer: nil,
-        timeFormat: nil
+        timeFormat: nil,
+        expiresOn: nil
     )
 
     func placeholder(in context: Context) -> PrayerTimelineEntry {
@@ -101,27 +152,39 @@ struct PrayerTimelineProvider: TimelineProvider {
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<PrayerTimelineEntry>) -> Void) {
-        guard let userDefaults = UserDefaults(suiteName: appGroupId),
-              let data = userDefaults.data(forKey: "prayerTimes"),
-              let prayerData = try? JSONDecoder().decode(PrayerData.self, from: data),
-              !prayerData.days.isEmpty else {
+        guard let prayerData = storedPrayerData() else {
             let entry = PrayerTimelineEntry(date: Date(), prayerData: Self.defaultPrayerData)
             let nextUpdate = Calendar.current.date(byAdding: .minute, value: 15, to: Date())!
             completion(Timeline(entries: [entry], policy: .after(nextUpdate)))
             return
         }
 
+        completion(buildTimeline(from: prayerData, at: Date()))
+    }
+
+    // The payload the app last wrote, if it wrote one worth reading.
+    func storedPrayerData() -> PrayerData? {
+        guard let userDefaults = UserDefaults(suiteName: appGroupId),
+              let data = userDefaults.data(forKey: "prayerTimes"),
+              let prayerData = try? JSONDecoder().decode(PrayerData.self, from: data),
+              !prayerData.days.isEmpty else {
+            return nil
+        }
+        return prayerData
+    }
+
+    // The timeline a payload yields at a given moment. Split out from
+    // getTimeline so it can be driven without a WidgetKit context, which has no
+    // initializer outside the system.
+    func buildTimeline(from prayerData: PrayerData, at now: Date) -> Timeline<PrayerTimelineEntry> {
         var entries: [PrayerTimelineEntry] = []
-        let now = Date()
         let calendar = Calendar.current
 
         // Prayer names in order
         let prayerNames = ["Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Isha"]
 
         // Date formatter for parsing ISO dates
-        let isoFormatter = DateFormatter()
-        isoFormatter.locale = Locale(identifier: "en_US_POSIX")
-        isoFormatter.dateFormat = "yyyy-MM-dd"
+        let isoFormatter = PrayerData.isoFormatter
 
         // Time formatter
         let timeFormatter = DateFormatter()
@@ -145,7 +208,7 @@ struct PrayerTimelineProvider: TimelineProvider {
             case "Asr": return day.asr
             case "Maghrib": return day.maghrib
             case "Isha": return day.isha
-            default: return "--:--"
+            default: return PrayerData.placeholderTime
             }
         }
 
@@ -175,6 +238,14 @@ struct PrayerTimelineProvider: TimelineProvider {
         // Get today's date for current prayer calculation
         let todayStart = calendar.startOfDay(for: now)
         let todayISOString = isoFormatter.string(from: todayStart)
+
+        // Past the expiry the app stamped, every cached day is behind us. Show
+        // placeholders and an instruction rather than the last day's times.
+        if prayerData.isExpired(on: todayISOString) {
+            let entry = PrayerTimelineEntry(date: now, prayerData: prayerData.expired(), isExpired: true)
+            let tomorrow = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now))!
+            return Timeline(entries: [entry], policy: .after(tomorrow))
+        }
 
         // Find today's prayer data and its index in the days array
         var calculatedCurrentPrayer = prayerData.currentPrayer ?? "Fajr"
@@ -208,26 +279,21 @@ struct PrayerTimelineProvider: TimelineProvider {
             }
         }
 
-        // Shift days array so today is first (fixes stale todayPrayers issue)
+        // Shift days array so today is first (fixes stale todayPrayers issue).
+        // An entry is only ever asked for its own day and the next one's Fajr,
+        // so it carries two days — thirty in each of ~180 entries would be a
+        // lot of archived timeline for a widget extension to hold.
         var nowDays = prayerData.days
         if let idx = todayIndex, idx > 0 {
-            nowDays = Array(prayerData.days.dropFirst(idx)) + Array(prayerData.days.prefix(idx))
+            nowDays = Array(prayerData.days.dropFirst(idx))
         }
+        nowDays = Array(nowDays.prefix(2))
 
         // Create NOW entry with calculated current prayer and shifted days
-        let nowPrayerData = PrayerData(
-            days: nowDays,
-            currentPrayer: calculatedCurrentPrayer,
-            locationName: prayerData.locationName,
-            lastUpdated: prayerData.lastUpdated,
-            accentColor: prayerData.accentColor,
-            isDarkMode: prayerData.isDarkMode,
-            themePrayer: prayerData.themePrayer,
-            timeFormat: prayerData.timeFormat
-        )
+        let nowPrayerData = prayerData.with(days: nowDays, currentPrayer: calculatedCurrentPrayer)
         entries.append(PrayerTimelineEntry(date: now, prayerData: nowPrayerData))
 
-        // Generate entries for all prayers across all 7 days
+        // Generate entries for all prayers across every cached day
         for (dayIndex, day) in prayerData.days.enumerated() {
             guard let dayDate = isoFormatter.date(from: day.date) else { continue }
 
@@ -237,24 +303,14 @@ struct PrayerTimelineProvider: TimelineProvider {
                 // Skip prayers that passed more than 1 minute ago (buffer for transition)
                 if prayerDate.addingTimeInterval(60) <= now { continue }
 
-                // Create entry data with updated currentPrayer
-                // Shift the days array so that the current day is first
-                var shiftedDays = Array(prayerData.days.dropFirst(dayIndex))
-                // Add remaining days from the beginning if needed (wrap around)
-                if shiftedDays.count < prayerData.days.count {
-                    shiftedDays.append(contentsOf: prayerData.days.prefix(dayIndex))
-                }
+                // Create entry data with updated currentPrayer.
+                // This day first, tomorrow behind it — and nothing behind that.
+                // Past the last day cached there is no tomorrow to show, and
+                // wrapping back to the start of the array would put a month-old
+                // Fajr where tomorrow's belongs.
+                let shiftedDays = Array(prayerData.days.dropFirst(dayIndex).prefix(2))
 
-                let entryData = PrayerData(
-                    days: shiftedDays,
-                    currentPrayer: prayerName,
-                    locationName: prayerData.locationName,
-                    lastUpdated: prayerData.lastUpdated,
-                    accentColor: prayerData.accentColor,
-                    isDarkMode: prayerData.isDarkMode,
-                    themePrayer: prayerData.themePrayer,
-                    timeFormat: prayerData.timeFormat
-                )
+                let entryData = prayerData.with(days: shiftedDays, currentPrayer: prayerName)
                 entries.append(PrayerTimelineEntry(date: prayerDate, prayerData: entryData))
             }
         }
@@ -262,24 +318,31 @@ struct PrayerTimelineProvider: TimelineProvider {
         // Sort entries by date
         entries.sort { $0.date < $1.date }
 
-        // Set refresh policy: refresh when data expires (after 7 days) or if no entries
-        let lastDay = prayerData.days.last
-        var refreshDate = calendar.date(byAdding: .day, value: 7, to: now)!
-        if let lastDayStr = lastDay?.date, let lastDayDate = isoFormatter.date(from: lastDayStr) {
-            // Refresh at midnight after the last day of data
-            refreshDate = calendar.startOfDay(for: lastDayDate).addingTimeInterval(86400)
+        // The payload dies at its expiry: drop anything scheduled at or past it
+        // and end the timeline on an expired entry, so the widget turns to
+        // placeholders by itself even if the system never asks for a new
+        // timeline. Asking daily is the belt to that pair of braces.
+        var refreshDate = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now))!
+        if let expiresOn = prayerData.expiresOn, let expiryDate = isoFormatter.date(from: expiresOn) {
+            let expiryStart = calendar.startOfDay(for: expiryDate)
+            entries.removeAll { $0.date >= expiryStart }
+            entries.append(PrayerTimelineEntry(date: expiryStart, prayerData: prayerData.expired(), isExpired: true))
+            refreshDate = min(refreshDate, expiryStart)
         }
 
-        completion(Timeline(entries: entries, policy: .after(refreshDate)))
+        return Timeline(entries: entries, policy: .after(refreshDate))
     }
 
     private func loadPrayerData() -> PrayerTimelineEntry {
-        guard let userDefaults = UserDefaults(suiteName: appGroupId),
-              let data = userDefaults.data(forKey: "prayerTimes"),
-              let prayerData = try? JSONDecoder().decode(PrayerData.self, from: data) else {
-            return PrayerTimelineEntry(date: Date(), prayerData: Self.defaultPrayerData)
+        let now = Date()
+        guard let prayerData = storedPrayerData() else {
+            return PrayerTimelineEntry(date: now, prayerData: Self.defaultPrayerData)
         }
-        return PrayerTimelineEntry(date: Date(), prayerData: prayerData)
+
+        if prayerData.isExpired(on: PrayerData.isoFormatter.string(from: now)) {
+            return PrayerTimelineEntry(date: now, prayerData: prayerData.expired(), isExpired: true)
+        }
+        return PrayerTimelineEntry(date: now, prayerData: prayerData)
     }
 }
 
@@ -288,6 +351,9 @@ struct PrayerTimelineProvider: TimelineProvider {
 struct PrayerTimelineEntry: TimelineEntry {
     let date: Date
     let prayerData: PrayerData
+    // Set on entries shown past the payload's expiry, where the times are
+    // placeholders and the view says so.
+    var isExpired: Bool = false
 }
 
 // MARK: - Morning Widget View (Fajr, Sunrise, Dhuhr)
@@ -300,16 +366,23 @@ struct MorningPrayerWidgetView: View {
         switch family {
         case .accessoryRectangular:
             // Lock screen rectangular widget
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: entry.isExpired ? 2 : 4) {
                 LockScreenPrayerRow(name: "Fajr", time: entry.prayerData.formatTime(entry.prayerData.fajr), isActive: entry.prayerData.currentPrayer == "Fajr")
                 LockScreenPrayerRow(name: "Sunrise", time: entry.prayerData.formatTime(entry.prayerData.sunrise), isActive: entry.prayerData.currentPrayer == "Sunrise")
                 LockScreenPrayerRow(name: "Dhuhr", time: entry.prayerData.formatTime(entry.prayerData.dhuhr), isActive: entry.prayerData.currentPrayer == "Dhuhr")
+                if entry.isExpired {
+                    ExpiredNoticeText(size: 11)
+                }
             }
         case .accessoryInline:
             // Lock screen inline widget
-            HStack(spacing: 4) {
-                Image(systemName: "sun.horizon.fill")
-                Text("\(getCurrentMorningPrayer()): \(getCurrentMorningTime())")
+            if entry.isExpired {
+                ExpiredInlineNotice()
+            } else {
+                HStack(spacing: 4) {
+                    Image(systemName: "sun.horizon.fill")
+                    Text("\(getCurrentMorningPrayer()): \(getCurrentMorningTime())")
+                }
             }
         default:
             EmptyView()
@@ -341,16 +414,23 @@ struct EveningPrayerWidgetView: View {
         switch family {
         case .accessoryRectangular:
             // Lock screen rectangular widget
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: entry.isExpired ? 2 : 4) {
                 LockScreenPrayerRow(name: "Asr", time: entry.prayerData.formatTime(entry.prayerData.asr), isActive: entry.prayerData.currentPrayer == "Asr")
                 LockScreenPrayerRow(name: "Maghrib", time: entry.prayerData.formatTime(entry.prayerData.maghrib), isActive: entry.prayerData.currentPrayer == "Maghrib")
                 LockScreenPrayerRow(name: "Isha", time: entry.prayerData.formatTime(entry.prayerData.isha), isActive: entry.prayerData.currentPrayer == "Isha")
+                if entry.isExpired {
+                    ExpiredNoticeText(size: 11)
+                }
             }
         case .accessoryInline:
             // Lock screen inline widget
-            HStack(spacing: 4) {
-                Image(systemName: "moon.stars.fill")
-                Text("\(getCurrentEveningPrayer()): \(getCurrentEveningTime())")
+            if entry.isExpired {
+                ExpiredInlineNotice()
+            } else {
+                HStack(spacing: 4) {
+                    Image(systemName: "moon.stars.fill")
+                    Text("\(getCurrentEveningPrayer()): \(getCurrentEveningTime())")
+                }
             }
         default:
             EmptyView()
@@ -369,6 +449,34 @@ struct EveningPrayerWidgetView: View {
         if entry.prayerData.currentPrayer == "Maghrib" { return entry.prayerData.formatTime(entry.prayerData.maghrib) }
         if entry.prayerData.currentPrayer == "Isha" { return entry.prayerData.formatTime(entry.prayerData.isha) }
         return entry.prayerData.formatTime(entry.prayerData.asr)
+    }
+}
+
+// MARK: - Expired Notice
+
+// Shown wherever the payload has outlived its window: the times beside it are
+// placeholders, and opening the app is what fixes that.
+struct ExpiredNoticeText: View {
+    var size: CGFloat = 12
+    var color: Color? = nil
+
+    var body: some View {
+        Text(PrayerData.expiredNotice)
+            .font(.system(size: size, weight: .medium))
+            .foregroundColor(color)
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+    }
+}
+
+// The inline lock-screen family is a single line, so the placeholder and the
+// instruction share it.
+struct ExpiredInlineNotice: View {
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "exclamationmark.arrow.circlepath")
+            Text("\(PrayerData.placeholderTime) \(PrayerData.expiredNotice)")
+        }
     }
 }
 
@@ -482,6 +590,10 @@ struct AllPrayersWidgetView: View {
                 .frame(maxWidth: .infinity)
             }
             .frame(maxHeight: .infinity)
+
+            if entry.isExpired {
+                ExpiredNoticeText(size: 12, color: accentColor)
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 12)
@@ -539,7 +651,7 @@ struct UpcomingPrayerWidgetView: View {
         case "Asr": return entry.prayerData.formatTime(entry.prayerData.asr)
         case "Maghrib": return entry.prayerData.formatTime(entry.prayerData.maghrib)
         case "Isha": return entry.prayerData.formatTime(entry.prayerData.isha)
-        default: return "--:--"
+        default: return PrayerData.placeholderTime
         }
     }
 
@@ -574,8 +686,8 @@ struct UpcomingPrayerWidgetView: View {
         case "Dhuhr": return entry.prayerData.formatTime(entry.prayerData.asr)
         case "Asr": return entry.prayerData.formatTime(entry.prayerData.maghrib)
         case "Maghrib": return entry.prayerData.formatTime(entry.prayerData.isha)
-        case "Isha": return entry.prayerData.formatTime(entry.prayerData.tomorrowFajr ?? entry.prayerData.fajr)
-        default: return "--:--"
+        case "Isha": return entry.prayerData.formatTime(entry.prayerData.tomorrowFajr ?? PrayerData.placeholderTime)
+        default: return PrayerData.placeholderTime
         }
     }
 
@@ -602,19 +714,28 @@ struct UpcomingPrayerWidgetView: View {
                     Text("\(currentPrayerName) \(currentPrayerTime)")
                         .font(.system(size: 16, weight: .bold))
                 }
-                HStack(spacing: 4) {
-                    Image(systemName: nextPrayerIcon)
-                        .font(.system(size: 12))
-                    Text("\(nextPrayerName) \(nextPrayerTime)")
-                        .font(.system(size: 14, weight: .medium))
+                if entry.isExpired {
+                    ExpiredNoticeText(size: 13)
+                        .opacity(0.7)
+                } else {
+                    HStack(spacing: 4) {
+                        Image(systemName: nextPrayerIcon)
+                            .font(.system(size: 12))
+                        Text("\(nextPrayerName) \(nextPrayerTime)")
+                            .font(.system(size: 14, weight: .medium))
+                    }
+                    .opacity(0.7)
                 }
-                .opacity(0.7)
             }
         case .accessoryInline:
             // Lock screen inline
-            HStack(spacing: 4) {
-                Image(systemName: prayerIcon)
-                Text("\(currentPrayerName): \(currentPrayerTime)")
+            if entry.isExpired {
+                ExpiredInlineNotice()
+            } else {
+                HStack(spacing: 4) {
+                    Image(systemName: prayerIcon)
+                    Text("\(currentPrayerName): \(currentPrayerTime)")
+                }
             }
         default:
             // Home screen small widget
@@ -631,16 +752,22 @@ struct UpcomingPrayerWidgetView: View {
                     .font(.system(size: 24, weight: .bold))
                     .foregroundColor(accentColor)
 
-                // Next prayer underneath and smaller
-                HStack(spacing: 4) {
-                    Text(nextPrayerName)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(secondaryTextColor)
-                    Text(nextPrayerTime)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(secondaryTextColor)
+                // Next prayer underneath and smaller — or, past the expiry,
+                // what to do about it
+                if entry.isExpired {
+                    ExpiredNoticeText(size: 12, color: secondaryTextColor)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                } else {
+                    HStack(spacing: 4) {
+                        Text(nextPrayerName)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(secondaryTextColor)
+                        Text(nextPrayerTime)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(secondaryTextColor)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
                 }
-                .frame(maxWidth: .infinity, alignment: .center)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .containerBackground(backgroundColor, for: .widget)
@@ -834,7 +961,8 @@ private let previewDay2 = DayPrayerTimes(
             accentColor: "#568FAF",
             isDarkMode: false,
             themePrayer: nil,
-            timeFormat: "24h"
+            timeFormat: "24h",
+            expiresOn: "2025-01-20"
         )
     )
 }
@@ -852,7 +980,8 @@ private let previewDay2 = DayPrayerTimes(
             accentColor: "#C39BD3",
             isDarkMode: true,
             themePrayer: nil,
-            timeFormat: "24h"
+            timeFormat: "24h",
+            expiresOn: "2025-01-20"
         )
     )
 }
@@ -870,8 +999,29 @@ private let previewDay2 = DayPrayerTimes(
             accentColor: "#55bddf",
             isDarkMode: false,
             themePrayer: nil,
-            timeFormat: "24h"
+            timeFormat: "24h",
+            expiresOn: "2025-01-20"
         )
+    )
+}
+
+#Preview("All Prayers Widget (expired)", as: .systemMedium) {
+    AllPrayersWidget()
+} timeline: {
+    PrayerTimelineEntry(
+        date: Date(),
+        prayerData: PrayerData(
+            days: [previewDay, previewDay2],
+            currentPrayer: "Dhuhr",
+            locationName: "Seattle, WA",
+            lastUpdated: nil,
+            accentColor: "#55bddf",
+            isDarkMode: false,
+            themePrayer: nil,
+            timeFormat: "24h",
+            expiresOn: "2025-01-20"
+        ).expired(),
+        isExpired: true
     )
 }
 
@@ -888,7 +1038,8 @@ private let previewDay2 = DayPrayerTimes(
             accentColor: "#ff9a13",
             isDarkMode: false,
             themePrayer: nil,
-            timeFormat: "24h"
+            timeFormat: "24h",
+            expiresOn: "2025-01-20"
         )
     )
 }

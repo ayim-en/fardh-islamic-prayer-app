@@ -3,14 +3,18 @@ import * as BackgroundTask from "expo-background-task";
 import * as TaskManager from "expo-task-manager";
 import { Platform } from "react-native";
 import { DEFAULT_PRAYER_SETTINGS, tuneSettingsToString } from "@/constants/prayerSettings";
-import { getPrayerDict, PrayerTimesParams } from "@/prayer-api/prayerTimesAPI";
-import { getLocalISODate } from "./calendarHelpers";
-import { cleanTimeString, getCurrentPrayerFromDay } from "./prayerHelpers";
 import {
-  DayPrayerTimes,
-  WidgetPrayerData,
-  updateWidgetPrayerTimes,
-} from "./widgetStorage";
+  getPrayerDict,
+  PrayerDict,
+  PrayerTimesParams,
+} from "@/prayer-api/prayerTimesAPI";
+import { getCurrentPrayerFromDay } from "./prayerHelpers";
+import {
+  buildWidgetDays,
+  monthsSpanning,
+  widgetExpiryDate,
+} from "./widgetPayload";
+import { WidgetPrayerData, updateWidgetPrayerTimes } from "./widgetStorage";
 
 const BACKGROUND_TASK_NAME = "WIDGET_REFRESH_TASK";
 
@@ -48,56 +52,24 @@ TaskManager.defineTask(BACKGROUND_TASK_NAME, async () => {
       params.tune = tuneSettingsToString(settings.tune);
     }
 
-    // Fetch prayer times for current month
+    // Fetch every month the widget's window touches — up to three, since 30
+    // days from the 31st of a month can reach past the next one.
     const now = new Date();
-    const currentMonth = now.getMonth() + 1;
-    const currentYear = now.getFullYear();
-
     const baseUrl = "https://api.aladhan.com/v1";
 
-    // Fetch current month
-    let prayerDict = await getPrayerDict(
-      baseUrl,
-      currentYear,
-      currentMonth,
-      params
-    );
-
-    // Check if we need next month's data (for days near end of month)
-    const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
-    const currentDay = now.getDate();
-    if (currentDay > daysInMonth - 7) {
-      // Fetch next month as well
-      const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
-      const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
-      const nextMonthDict = await getPrayerDict(
-        baseUrl,
-        nextYear,
-        nextMonth,
-        params
-      );
-      prayerDict = { ...prayerDict, ...nextMonthDict };
-    }
-
-    // Extract 7 days starting from today
-    const days: DayPrayerTimes[] = [];
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(now);
-      date.setDate(date.getDate() + i);
-      const isoDate = getLocalISODate(date);
-      const dayData = prayerDict[isoDate];
-      if (dayData?.timings) {
-        days.push({
-          date: isoDate,
-          fajr: cleanTimeString(dayData.timings.Fajr),
-          sunrise: cleanTimeString(dayData.timings.Sunrise),
-          dhuhr: cleanTimeString(dayData.timings.Dhuhr),
-          asr: cleanTimeString(dayData.timings.Asr),
-          maghrib: cleanTimeString(dayData.timings.Maghrib),
-          isha: cleanTimeString(dayData.timings.Isha),
-        });
+    let prayerDict: PrayerDict = {};
+    for (const { year, month } of monthsSpanning(now)) {
+      try {
+        const monthDict = await getPrayerDict(baseUrl, year, month, params);
+        prayerDict = { ...prayerDict, ...monthDict };
+      } catch (error) {
+        // A month we can't reach shortens the window rather than failing the
+        // refresh; the expiry below shrinks to match what we actually have.
+        console.warn(`[BackgroundTask] Skipping month ${month}/${year}:`, error);
       }
     }
+
+    const days = buildWidgetDays(prayerDict, now);
 
     if (days.length === 0) {
       console.log("[BackgroundTask] No prayer data found for upcoming days");
@@ -121,6 +93,7 @@ TaskManager.defineTask(BACKGROUND_TASK_NAME, async () => {
     // Update widget storage
     const widgetData: WidgetPrayerData = {
       days,
+      expiresOn: widgetExpiryDate(days),
       currentPrayer,
       locationName: locationName || null,
       lastUpdated: new Date().toISOString(),

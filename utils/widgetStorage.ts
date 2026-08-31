@@ -31,7 +31,10 @@ export interface DayPrayerTimes {
 }
 
 export interface WidgetPrayerData {
-  days: DayPrayerTimes[]; // 7 days of prayer times
+  days: DayPrayerTimes[]; // A contiguous run of days starting today
+  // ISO date of the first day `days` does not cover. Past it the widget shows
+  // placeholders rather than the last cached day's times; see ADR-0002.
+  expiresOn: string;
   currentPrayer: string | null;
   locationName: string | null;
   lastUpdated: string;

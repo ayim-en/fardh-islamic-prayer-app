@@ -6,4 +6,4 @@ iOS caps an app at **64 pending local notifications**, which is why scheduling s
 
 ## Consequences
 
-Because the widget contains no networking and cannot refresh itself, a wide cache is its only defence against staleness. Past the cached window it must show `--:--` and an "Open to refresh" line rather than the last known times, which would be plausible and wrong.
+Because the widget contains no networking and cannot refresh itself, a wide cache is its only defence against staleness. Past the cached window it must show `--:--` and an "Open app to refresh" line rather than the last known times, which would be plausible and wrong.
