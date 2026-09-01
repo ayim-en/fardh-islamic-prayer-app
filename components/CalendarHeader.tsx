@@ -74,39 +74,28 @@ const LEADING_EM = { gregorian: 8.6, hijri: 10.8 }; // bold, as the heading rend
 // that line takes they never bind.
 const TRAILING_EM = { gregorian: 9.3, hijri: 12.7 }; // semibold
 
-// The mockup sets the secondary line at just under half the primary one (digit
-// heights 27px against 57px). Deriving it as a ratio rather than clamping it
-// independently is what keeps that relationship intact on every screen — the
-// two lines previously drifted to 0.74 on a mid-size phone, which read as two
-// headings rather than a date and its subtitle.
-const SECONDARY_RATIO = 0.55;
-
 // Width caps the heading outright — a floor allowed to overrule it would hand
 // the fitting back to adjustsFontSizeToFit, which measures the string in front
 // of it, and the header would change size from one month to the next.
 const leadingSize = (headerHeight: number, widthCap: number) =>
   Math.min(widthCap, Math.max(34, Math.min(52, headerHeight * 0.24)));
 
-// A ratio alone would drag the secondary line down with the primary. A Hijri
-// heading is half again as wide as a Gregorian one, so it takes a smaller size
-// — and the short date beneath it, which has width to spare, would inherit that
-// squeeze and read as an afterthought rather than as the other half of the
-// date.
+// The second line is sized on its own terms, not as a fraction of the heading.
 //
-// So the line has a size of its own to fall back on: the size it takes when the
-// Gregorian date leads. That is this same expression with the Gregorian budget,
-// which is why the two modes now put their second line at exactly the same
-// size on every device rather than within a point of each other. The ratio
-// still governs wherever it gives more.
+// A fraction was the original rule, from the mockup's 27px under 57px. It only
+// works while the two lines carry similar amounts of text. With Hijri leading
+// they do not: the heading is long and the date beneath it short, so matching
+// point sizes leaves the second line covering barely half the width the first
+// one does — and it reads as a caption, however the numbers compare.
 //
-// The pair survives the closer sizes because size was never the only thing
-// marking this line as secondary: it is semibold against bold, and muted
-// against white, under a heading that is physically much the wider of the two.
-const secondaryTarget = (headerHeight: number, usable: number) =>
-  Math.min(
-    26,
-    leadingSize(headerHeight, usable / LEADING_EM.gregorian) * SECONDARY_RATIO
-  );
+// So it fills a set share of the width its own longest label would need, which
+// gives a short label the points it takes to carry the same weight as a long
+// one. The cap against the heading keeps the pair a heading and a date rather
+// than two headings; the ceiling stops a large phone running away with it.
+const SECONDARY_FILL = 0.85; // of the width its own longest label needs
+const SECONDARY_MAX_RATIO = 0.85; // of the heading above it
+const SECONDARY_CEILING = 30;
+const SECONDARY_FLOOR = 18;
 
 const scaleType = (
   headerHeight: number,
@@ -118,11 +107,12 @@ const scaleType = (
   return {
     leading: Math.floor(leading),
     trailing: Math.floor(
-      Math.min(
-        usable / em.trailing,
-        Math.max(
-          secondaryTarget(headerHeight, usable),
-          Math.min(26, leading * SECONDARY_RATIO)
+      Math.max(
+        SECONDARY_FLOOR,
+        Math.min(
+          SECONDARY_CEILING,
+          (usable / em.trailing) * SECONDARY_FILL,
+          leading * SECONDARY_MAX_RATIO
         )
       )
     ),
