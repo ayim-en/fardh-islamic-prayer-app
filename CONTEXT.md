@@ -16,8 +16,12 @@ _Avoid_: date format, calendar format, date display mode
 The final third of the interval from Maghrib to Fajr. The night is divided from Maghrib, not from Isha.
 _Avoid_: tahajjud time, qiyam time, last third of the day
 
+**Night in progress**:
+The night whose last third has not yet ended: the one that opened at yesterday evening's Maghrib until this morning's Fajr, and tonight's from Fajr onwards. A night is dated by the evening it opened on, not by the calendar day its window falls in.
+_Avoid_: tonight, current night, today's night
+
 **Widget payload**:
-What the app writes to app-group storage for the widget to read: a contiguous run of days of prayer times starting today, an expiry, and the colours and formats the widget renders with. The widget never fetches, so the payload is the whole of what it knows.
+What the app writes to app-group storage for the widget to read: a contiguous run of days of prayer times starting today, the last third of each of their nights as absolute instants, an expiry, and the colours and formats the widget renders with. The widget never fetches, so the payload is the whole of what it knows.
 _Avoid_: widget data, widget cache, widget blob
 
 **Widget window**:

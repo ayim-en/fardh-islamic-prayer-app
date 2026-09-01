@@ -1,4 +1,4 @@
-import { getNextISODate } from "@/utils/calendarHelpers";
+import { getNextISODate, getPreviousISODate } from "@/utils/calendarHelpers";
 
 describe("getNextISODate", () => {
   it("advances to the next day", () => {
@@ -25,5 +25,29 @@ describe("getNextISODate", () => {
     expect(getNextISODate("")).toBe("");
     expect(getNextISODate("14-03-2026")).toBe("");
     expect(getNextISODate(undefined as unknown as string)).toBe("");
+  });
+});
+
+describe("getPreviousISODate", () => {
+  it("steps back to the day before", () => {
+    expect(getPreviousISODate("2026-03-14")).toBe("2026-03-13");
+  });
+
+  it("steps back across a month boundary", () => {
+    expect(getPreviousISODate("2026-03-01")).toBe("2026-02-28");
+  });
+
+  it("steps back across a year boundary", () => {
+    expect(getPreviousISODate("2027-01-01")).toBe("2026-12-31");
+  });
+
+  it("steps back into the leap day of a leap year", () => {
+    expect(getPreviousISODate("2028-03-01")).toBe("2028-02-29");
+  });
+
+  it("returns empty rather than an invalid date for malformed input", () => {
+    expect(getPreviousISODate("")).toBe("");
+    expect(getPreviousISODate("14-03-2026")).toBe("");
+    expect(getPreviousISODate(undefined as unknown as string)).toBe("");
   });
 });

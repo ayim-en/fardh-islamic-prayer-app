@@ -1,7 +1,12 @@
 import { PrayerDict } from "@/prayer-api/prayerTimesAPI";
-import { getLocalISODate, getNextISODate, isISODate } from "./calendarHelpers";
-import { cleanTimeString } from "./prayerHelpers";
-import { DayPrayerTimes } from "./widgetStorage";
+import {
+  getLocalISODate,
+  getNextISODate,
+  getPreviousISODate,
+  isISODate,
+} from "./calendarHelpers";
+import { cleanTimeString, getLastThirdOfNight } from "./prayerHelpers";
+import { DayPrayerTimes, LastThirdNight } from "./widgetStorage";
 
 // How many days of prayer times the widget payload carries. Deliberately not
 // the notification window — see ADR-0002; the two are unrelated and the iOS cap
@@ -45,6 +50,66 @@ export const buildWidgetDays = (
   return days;
 };
 
+// An instant in the shape the payload carries it: UTC, to the second. The
+// milliseconds a Date prints are noise the widget would have to parse around.
+const toInstant = (date: Date): string =>
+  date.toISOString().replace(/\.\d{3}Z$/, "Z");
+
+/**
+ * The last third of every night the payload can speak for: one per cached day,
+ * plus the night that opened the evening before the first of them, so a
+ * payload written after midnight still holds the night in progress.
+ *
+ * Maghrib and the following Fajr come from the day list wherever it has them,
+ * so a night's end is exactly the Fajr the payload carries for the next day
+ * and the two cannot disagree. The dictionary fills the two edges the day list
+ * cannot reach: the evening before it starts, and the Fajr that closes its
+ * final night. That last day must not join the day list — the expiry is
+ * derived from it and the window is pinned at thirty days (ADR-0002) — so it
+ * is consumed here and appears only as a night's end.
+ *
+ * A night whose times are missing or unusable is left out rather than guessed
+ * at. The widget shows placeholders for a night it has no window for, which is
+ * the honest answer and the one opening the app repairs.
+ */
+export const buildLastThirdNights = (
+  prayerDict: PrayerDict,
+  days: DayPrayerTimes[]
+): LastThirdNight[] => {
+  const lastDay = days[days.length - 1];
+  if (!lastDay) return [];
+
+  const byDate = new Map(days.map((day) => [day.date, day]));
+  const maghribOn = (isoDate: string): string =>
+    byDate.get(isoDate)?.maghrib ??
+    cleanTimeString(prayerDict[isoDate]?.timings.Maghrib ?? "");
+  const fajrOn = (isoDate: string): string =>
+    byDate.get(isoDate)?.fajr ??
+    cleanTimeString(prayerDict[isoDate]?.timings.Fajr ?? "");
+
+  const nights: LastThirdNight[] = [];
+
+  // ISO dates order lexicographically, so the run ends where the day list does.
+  let date = getPreviousISODate(days[0].date);
+  while (date && date <= lastDay.date) {
+    const window = getLastThirdOfNight(
+      date,
+      maghribOn(date),
+      fajrOn(getNextISODate(date))
+    );
+    if (window) {
+      nights.push({
+        date,
+        start: toInstant(window.start),
+        end: toInstant(window.end),
+      });
+    }
+    date = getNextISODate(date);
+  }
+
+  return nights;
+};
+
 /**
  * The expiry stamped into the payload: the ISO date of the first day the day
  * array does not cover. The payload is good through the end of the last day it
@@ -76,17 +141,25 @@ export const isWidgetPayloadExpired = (
 export type CalendarMonth = { year: number; month: number };
 
 /**
- * The Gregorian months the widget's window, starting at `from`, touches — in
- * order. The window can reach a third month, since 31 January runs to 1 March,
- * so a fetcher filling it asks rather than assuming two.
+ * The Gregorian months a fetcher filling the widget's window, starting at
+ * `from`, must ask for — in order. The run can reach a third month, since 30
+ * January runs to 2 March, so a fetcher asks rather than assuming two.
+ *
+ * The run reaches a day either side of the cached days. The morning after the
+ * last one holds the Fajr that ends its night; the evening before the first
+ * one opened the night that may still be in progress. Neither joins the day
+ * list — both are consumed by buildLastThirdNights.
  */
 export const monthsSpanning = (from: Date): CalendarMonth[] => {
   const months: CalendarMonth[] = [];
 
-  const last = new Date(from);
-  last.setDate(last.getDate() + WIDGET_WINDOW_DAYS - 1);
+  const first = new Date(from);
+  first.setDate(first.getDate() - 1);
 
-  const cursor = new Date(from.getFullYear(), from.getMonth(), 1);
+  const last = new Date(from);
+  last.setDate(last.getDate() + WIDGET_WINDOW_DAYS);
+
+  const cursor = new Date(first.getFullYear(), first.getMonth(), 1);
   const end = new Date(last.getFullYear(), last.getMonth(), 1);
 
   while (cursor <= end) {

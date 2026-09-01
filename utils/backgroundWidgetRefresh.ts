@@ -10,6 +10,7 @@ import {
 } from "@/prayer-api/prayerTimesAPI";
 import { getCurrentPrayerFromDay } from "./prayerHelpers";
 import {
+  buildLastThirdNights,
   buildWidgetDays,
   monthsSpanning,
   widgetExpiryDate,
@@ -53,7 +54,10 @@ TaskManager.defineTask(BACKGROUND_TASK_NAME, async () => {
     }
 
     // Fetch every month the widget's window touches — up to three, since 30
-    // days from the 31st of a month can reach past the next one.
+    // days from the 31st of a month can reach past the next one. The run also
+    // covers a day either side of the cached days: the evening before opened
+    // the night that may still be in progress, and the morning after holds the
+    // Fajr that ends the last one. Neither joins the day list.
     const now = new Date();
     const baseUrl = "https://api.aladhan.com/v1";
 
@@ -93,6 +97,7 @@ TaskManager.defineTask(BACKGROUND_TASK_NAME, async () => {
     // Update widget storage
     const widgetData: WidgetPrayerData = {
       days,
+      lastThirdNights: buildLastThirdNights(prayerDict, days),
       expiresOn: widgetExpiryDate(days),
       currentPrayer,
       locationName: locationName || null,

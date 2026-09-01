@@ -30,8 +30,29 @@ export interface DayPrayerTimes {
   isha: string;
 }
 
+/**
+ * A night's last third, as the widget carries it: the evening it opened on,
+ * and the two moments it runs between.
+ *
+ * The moments are absolute instants, not clock times. The window opens after
+ * midnight, so its clock time falls on the day after the Maghrib that began
+ * the night — the crossing every implementation of this gets wrong. Carrying
+ * instants answers it once, in the app, and leaves the widget with nothing to
+ * infer. See buildLastThirdNights in widgetPayload.ts.
+ */
+export interface LastThirdNight {
+  // ISO date of the Maghrib the night was divided from.
+  date: string;
+  start: string;
+  end: string;
+}
+
 export interface WidgetPrayerData {
   days: DayPrayerTimes[]; // A contiguous run of days starting today
+  // The last third of each night the days cover, plus the night already in
+  // progress when the payload was written. Absolute instants, so the widget
+  // does no arithmetic across the midnight the window opens after.
+  lastThirdNights: LastThirdNight[];
   // ISO date of the first day `days` does not cover. Past it the widget shows
   // placeholders rather than the last cached day's times; see ADR-0002.
   expiresOn: string;
@@ -64,11 +85,10 @@ export const updateWidgetPrayerTimes = async (
     // Small delay to ensure data is flushed before widget reload
     await new Promise(resolve => setTimeout(resolve, 50));
 
-    // Reload all widgets
-    ExtensionStorageClass.reloadWidget("MorningPrayerWidget");
-    ExtensionStorageClass.reloadWidget("EveningPrayerWidget");
-    ExtensionStorageClass.reloadWidget("AllPrayersWidget");
-    ExtensionStorageClass.reloadWidget("UpcomingPrayerWidget");
+    // Reload every widget, rather than an enumerated list of kinds: a widget
+    // missing from such a list looks right on install and then silently
+    // freezes a day later, and nothing about adding one makes you remember it.
+    ExtensionStorageClass.reloadWidget(null);
 
     return true;
   } catch (error) {

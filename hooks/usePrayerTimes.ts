@@ -4,6 +4,7 @@ import { usePrayerSettings } from "@/context/PrayerSettingsContext";
 import { getPrayerDict, PrayerDict } from "@/prayer-api/prayerTimesAPI";
 import { getLocalISODate } from "@/utils/calendarHelpers";
 import { getCurrentPrayer } from "@/utils/prayerHelpers";
+import { monthsSpanning } from "@/utils/widgetPayload";
 import { useFocusEffect } from "@react-navigation/native";
 import * as Location from "expo-location";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -25,8 +26,12 @@ export const usePrayerTimes = (location: Location.LocationObject | null) => {
     [settings.tune]
   );
 
-  // Fetches prayer times when location or settings change
-  // Fetches previous, current, and next month for better carousel experience
+  // Fetches prayer times when location or settings change.
+  //
+  // The previous month is for the carousel; the rest are whatever the widget's
+  // payload reaches into, since the payload is built from this dictionary when
+  // the app is open. Falling short there would leave the last cached day
+  // without the following Fajr its last third ends at.
   useEffect(() => {
     if (!location || settingsLoading) return;
 
@@ -36,18 +41,20 @@ export const usePrayerTimes = (location: Location.LocationObject | null) => {
         const baseUrl = "https://api.aladhan.com/v1";
         const now = new Date();
 
-        // Calculate previous, current, and next month/year
         const currentYear = now.getFullYear();
         const currentMonth = now.getMonth() + 1;
 
         const prevDate = new Date(currentYear, currentMonth - 2, 1); // -2 because month is 0-indexed in Date constructor
-        const nextDate = new Date(currentYear, currentMonth, 1);
 
         const months = [
           { year: prevDate.getFullYear(), month: prevDate.getMonth() + 1 },
-          { year: currentYear, month: currentMonth },
-          { year: nextDate.getFullYear(), month: nextDate.getMonth() + 1 },
-        ];
+          ...monthsSpanning(now),
+        ].filter(
+          (month, index, all) =>
+            all.findIndex(
+              (other) => other.year === month.year && other.month === month.month
+            ) === index
+        );
 
         const params = {
           latitude: location.coords.latitude,
@@ -69,10 +76,14 @@ export const usePrayerTimes = (location: Location.LocationObject | null) => {
         // Set current month data immediately so UI can render
         setPrayerDict(currentMonthData);
 
-        // Fetch previous and next months sequentially with delay to avoid rate limiting
+        // Fetch the remaining months sequentially with delay to avoid rate limiting
         let combinedData = { ...currentMonthData };
 
-        for (const { year, month } of [months[0], months[2]]) {
+        const remaining = months.filter(
+          ({ year, month }) => !(year === currentYear && month === currentMonth)
+        );
+
+        for (const { year, month } of remaining) {
           try {
             await delay(150); // Small delay between requests
             const monthData = await getPrayerDict(baseUrl, year, month, params);

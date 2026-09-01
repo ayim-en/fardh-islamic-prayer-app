@@ -10,7 +10,11 @@ import { useThemeColors } from "@/context/ThemeContext";
 import { useAnimatedBackgroundColor } from "@/hooks/useAnimatedColor";
 import { useLocation } from "@/hooks/useLocation";
 import { usePrayerTimes } from "@/hooks/usePrayerTimes";
-import { buildWidgetDays, widgetExpiryDate } from "@/utils/widgetPayload";
+import {
+  buildLastThirdNights,
+  buildWidgetDays,
+  widgetExpiryDate,
+} from "@/utils/widgetPayload";
 import { updateWidgetPrayerTimes } from "@/utils/widgetStorage";
 import { Tabs } from "expo-router";
 import React, { useEffect } from "react";
@@ -79,6 +83,7 @@ export default function TabLayout() {
     if (days.length > 0) {
       updateWidgetPrayerTimes({
         days,
+        lastThirdNights: buildLastThirdNights(prayerDict, days),
         expiresOn: widgetExpiryDate(days),
         currentPrayer: currentPrayer?.prayer || null,
         locationName: locationName || null,

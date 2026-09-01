@@ -18,8 +18,29 @@ struct DayPrayerTimes: Codable {
     let isha: String
 }
 
+// A night's last third, as the app worked it out: the evening it opened on,
+// and the two moments it runs between. The moments are absolute instants — the
+// window opens after midnight, so its clock time falls on the day after the
+// Maghrib that began the night, and the widget is spared inferring that.
+struct LastThirdNight: Codable {
+    let date: String  // ISO date of the Maghrib the night was divided from
+    let start: String
+    let end: String   // the following day's Fajr
+}
+
+// The two moments a night's last third runs between, once the instants the
+// payload carries have been read back.
+struct LastThirdWindow {
+    let start: Date
+    let end: Date
+}
+
 struct PrayerData: Codable {
     let days: [DayPrayerTimes] // A contiguous run of days starting the day it was written
+    // The last third of each night the days cover, plus the night already in
+    // progress when the payload was written. Absent from payloads written
+    // before the app carried them.
+    let lastThirdNights: [LastThirdNight]?
     let currentPrayer: String?
     let locationName: String?
     let lastUpdated: String?
@@ -41,6 +62,22 @@ struct PrayerData: Codable {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
+
+    // Parses the absolute instants the last third's window is written as.
+    static let instantFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter
+    }()
+
+    // Prints an instant as the clock time it falls on here, which is what the
+    // 12h/24h formatter below consumes.
+    static let clockFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "HH:mm"
         return formatter
     }()
 
@@ -68,9 +105,14 @@ struct PrayerData: Codable {
     // The same payload showing a different slice of days. Everything else is
     // carried across, so a new field on PrayerData isn't a new edit in each of
     // the places one payload is rebuilt from another.
-    func with(days: [DayPrayerTimes], currentPrayer: String?) -> PrayerData {
+    func with(
+        days: [DayPrayerTimes],
+        currentPrayer: String?,
+        nights: [LastThirdNight]? = nil
+    ) -> PrayerData {
         PrayerData(
             days: days,
+            lastThirdNights: nights ?? lastThirdNights,
             currentPrayer: currentPrayer,
             locationName: locationName,
             lastUpdated: lastUpdated,
@@ -84,9 +126,11 @@ struct PrayerData: Codable {
 
     // The same payload with every prayer time replaced by a placeholder and
     // nothing marked current. The app's colours are kept so the widget still
-    // looks like itself while it says it cannot be trusted.
+    // looks like itself while it says it cannot be trusted. The nights go too:
+    // a last third computed from days this stale would be plausible and wrong,
+    // which is the one failure ADR-0002 exists to prevent.
     func expired() -> PrayerData {
-        with(days: [Self.placeholderDay], currentPrayer: nil)
+        with(days: [Self.placeholderDay], currentPrayer: nil, nights: [])
     }
 
     // Helper to get today's prayers (first day in array)
@@ -108,6 +152,68 @@ struct PrayerData: Codable {
         return days[1].fajr
     }
 
+    // The moment the payload stops being true: the start of the expiry day the
+    // app stamped in, or nothing if it stamped none.
+    var expiryStart: Date? {
+        guard let expiresOn, let expiryDate = Self.isoFormatter.date(from: expiresOn) else {
+            return nil
+        }
+        return Calendar.current.startOfDay(for: expiryDate)
+    }
+
+    // The night the widget speaks for at `date`: the one in progress, or —
+    // once Fajr has closed it — the one opening this evening. Someone reading a
+    // lock screen at 2am is deciding whether to get up now, so until Fajr the
+    // answer is still the night that opened last evening, and tomorrow night's
+    // start would be actively wrong there.
+    //
+    // Nights are dated by the evening they opened on and carried in order, so
+    // the first whose Fajr is still ahead is the one in progress. Which evening
+    // that is settles the question the widget cannot otherwise answer: a night
+    // dated yesterday runs until this morning's Fajr, so it is still tonight;
+    // one dated today is only the answer once this morning's Fajr has gone,
+    // which the yesterday-dated night proves by having ended.
+    //
+    // A night the app could not compute is absent rather than guessed at, and
+    // without it there is no proof either way — so the answer is nothing, and
+    // the view says so in placeholders instead of naming the wrong night.
+    func lastThird(at date: Date) -> LastThirdWindow? {
+        let calendar = Calendar.current
+        let todayISO = Self.isoFormatter.string(from: date)
+        let yesterdayISO = Self.isoFormatter.string(
+            from: calendar.date(byAdding: .day, value: -1, to: date) ?? date
+        )
+        var fajrHasPassedToday = false
+
+        for night in lastThirdNights ?? [] {
+            guard let start = Self.instantFormatter.date(from: night.start),
+                  let end = Self.instantFormatter.date(from: night.end) else { continue }
+
+            if end <= date {
+                if night.date == yesterdayISO { fajrHasPassedToday = true }
+                continue
+            }
+
+            if night.date == yesterdayISO { return LastThirdWindow(start: start, end: end) }
+            if night.date == todayISO {
+                // Only the ended night above can show that this morning's Fajr
+                // has gone, and without that proof the widget stays quiet. It
+                // would rather say nothing than name tomorrow night at 2am.
+                return fajrHasPassedToday ? LastThirdWindow(start: start, end: end) : nil
+            }
+            // Dated later than today: the coming night, never the answer here.
+            return nil
+        }
+        return nil
+    }
+
+    // An instant as the clock time the widget prints it as, through the same
+    // formatter every other widget's times pass through — so the 12h/24h
+    // preference and the AM/PM rendering match rather than quietly diverging.
+    func formatInstant(_ instant: Date) -> String {
+        formatTime(Self.clockFormatter.string(from: instant))
+    }
+
     // Helper to format time based on preference
     func formatTime(_ time: String) -> String {
         let use12Hour = timeFormat == "12h"
@@ -127,11 +233,14 @@ struct PrayerData: Codable {
 
 // MARK: - Timeline Provider
 
-struct PrayerTimelineProvider: TimelineProvider {
-    let appGroupId = "group.com.ayimen.fardh"
+// Where the app leaves the payload, and the one place any widget reads it from.
+enum WidgetStore {
+    static let appGroupId = "group.com.ayimen.fardh"
 
-    private static let defaultPrayerData = PrayerData(
+    // What a widget shows before the app has ever written to it.
+    static let awaitingSync = PrayerData(
         days: [PrayerData.placeholderDay],
+        lastThirdNights: [],
         currentPrayer: nil,
         locationName: "Open app to sync",
         lastUpdated: nil,
@@ -142,28 +251,8 @@ struct PrayerTimelineProvider: TimelineProvider {
         expiresOn: nil
     )
 
-    func placeholder(in context: Context) -> PrayerTimelineEntry {
-        PrayerTimelineEntry(date: Date(), prayerData: Self.defaultPrayerData)
-    }
-
-    func getSnapshot(in context: Context, completion: @escaping (PrayerTimelineEntry) -> Void) {
-        let entry = loadPrayerData()
-        completion(entry)
-    }
-
-    func getTimeline(in context: Context, completion: @escaping (Timeline<PrayerTimelineEntry>) -> Void) {
-        guard let prayerData = storedPrayerData() else {
-            let entry = PrayerTimelineEntry(date: Date(), prayerData: Self.defaultPrayerData)
-            let nextUpdate = Calendar.current.date(byAdding: .minute, value: 15, to: Date())!
-            completion(Timeline(entries: [entry], policy: .after(nextUpdate)))
-            return
-        }
-
-        completion(buildTimeline(from: prayerData, at: Date()))
-    }
-
     // The payload the app last wrote, if it wrote one worth reading.
-    func storedPrayerData() -> PrayerData? {
+    static func storedPrayerData() -> PrayerData? {
         guard let userDefaults = UserDefaults(suiteName: appGroupId),
               let data = userDefaults.data(forKey: "prayerTimes"),
               let prayerData = try? JSONDecoder().decode(PrayerData.self, from: data),
@@ -172,6 +261,30 @@ struct PrayerTimelineProvider: TimelineProvider {
         }
         return prayerData
     }
+}
+
+struct PrayerTimelineProvider: TimelineProvider {
+
+    func placeholder(in context: Context) -> PrayerTimelineEntry {
+        PrayerTimelineEntry(date: Date(), prayerData: WidgetStore.awaitingSync)
+    }
+
+    func getSnapshot(in context: Context, completion: @escaping (PrayerTimelineEntry) -> Void) {
+        let entry = loadPrayerData()
+        completion(entry)
+    }
+
+    func getTimeline(in context: Context, completion: @escaping (Timeline<PrayerTimelineEntry>) -> Void) {
+        guard let prayerData = WidgetStore.storedPrayerData() else {
+            let entry = PrayerTimelineEntry(date: Date(), prayerData: WidgetStore.awaitingSync)
+            let nextUpdate = Calendar.current.date(byAdding: .minute, value: 15, to: Date())!
+            completion(Timeline(entries: [entry], policy: .after(nextUpdate)))
+            return
+        }
+
+        completion(buildTimeline(from: prayerData, at: Date()))
+    }
+
 
     // The timeline a payload yields at a given moment. Split out from
     // getTimeline so it can be driven without a WidgetKit context, which has no
@@ -318,25 +431,16 @@ struct PrayerTimelineProvider: TimelineProvider {
         // Sort entries by date
         entries.sort { $0.date < $1.date }
 
-        // The payload dies at its expiry: drop anything scheduled at or past it
-        // and end the timeline on an expired entry, so the widget turns to
-        // placeholders by itself even if the system never asks for a new
-        // timeline. Asking daily is the belt to that pair of braces.
-        var refreshDate = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now))!
-        if let expiresOn = prayerData.expiresOn, let expiryDate = isoFormatter.date(from: expiresOn) {
-            let expiryStart = calendar.startOfDay(for: expiryDate)
-            entries.removeAll { $0.date >= expiryStart }
-            entries.append(PrayerTimelineEntry(date: expiryStart, prayerData: prayerData.expired(), isExpired: true))
-            refreshDate = min(refreshDate, expiryStart)
-        }
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now))!
+        let live = endingAtExpiry(entries, of: prayerData, refreshing: tomorrow)
 
-        return Timeline(entries: entries, policy: .after(refreshDate))
+        return Timeline(entries: live.entries, policy: .after(live.refreshDate))
     }
 
     private func loadPrayerData() -> PrayerTimelineEntry {
         let now = Date()
-        guard let prayerData = storedPrayerData() else {
-            return PrayerTimelineEntry(date: now, prayerData: Self.defaultPrayerData)
+        guard let prayerData = WidgetStore.storedPrayerData() else {
+            return PrayerTimelineEntry(date: now, prayerData: WidgetStore.awaitingSync)
         }
 
         if prayerData.isExpired(on: PrayerData.isoFormatter.string(from: now)) {
@@ -346,7 +450,96 @@ struct PrayerTimelineProvider: TimelineProvider {
     }
 }
 
+// MARK: - Last Third Timeline Provider
+
+// The last third's own timeline. The existing one emits an entry per prayer per
+// day to drive which prayer is current, which this widget never reads; all its
+// wording turns on are the two moments a night's window opens and closes.
+struct LastThirdTimelineProvider: TimelineProvider {
+    func placeholder(in context: Context) -> PrayerTimelineEntry {
+        PrayerTimelineEntry(date: Date(), prayerData: WidgetStore.awaitingSync)
+    }
+
+    func getSnapshot(in context: Context, completion: @escaping (PrayerTimelineEntry) -> Void) {
+        let now = Date()
+        guard let prayerData = WidgetStore.storedPrayerData() else {
+            completion(PrayerTimelineEntry(date: now, prayerData: WidgetStore.awaitingSync))
+            return
+        }
+
+        if prayerData.isExpired(on: PrayerData.isoFormatter.string(from: now)) {
+            completion(PrayerTimelineEntry(date: now, prayerData: prayerData.expired(), isExpired: true))
+            return
+        }
+        completion(PrayerTimelineEntry(date: now, prayerData: prayerData))
+    }
+
+    func getTimeline(in context: Context, completion: @escaping (Timeline<PrayerTimelineEntry>) -> Void) {
+        let now = Date()
+        guard let prayerData = WidgetStore.storedPrayerData() else {
+            let entry = PrayerTimelineEntry(date: now, prayerData: WidgetStore.awaitingSync)
+            let nextUpdate = Calendar.current.date(byAdding: .minute, value: 15, to: now)!
+            completion(Timeline(entries: [entry], policy: .after(nextUpdate)))
+            return
+        }
+
+        completion(buildTimeline(from: prayerData, at: now))
+    }
+
+    // The timeline a payload yields at a given moment. Split out from
+    // getTimeline so it can be driven without a WidgetKit context, which has no
+    // initializer outside the system.
+    func buildTimeline(from prayerData: PrayerData, at now: Date) -> Timeline<PrayerTimelineEntry> {
+        let calendar = Calendar.current
+        let refreshDate = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now))!
+
+        // Past the expiry the app stamped, the nights are as stale as the days.
+        // Placeholders and an instruction, never a window computed from them.
+        if prayerData.isExpired(on: PrayerData.isoFormatter.string(from: now)) {
+            let entry = PrayerTimelineEntry(date: now, prayerData: prayerData.expired(), isExpired: true)
+            return Timeline(entries: [entry], policy: .after(refreshDate))
+        }
+
+        // Each entry is asked only which night it falls in, so it carries the
+        // nights and one day rather than the whole cached month.
+        let carried = prayerData.with(days: Array(prayerData.days.prefix(1)), currentPrayer: nil)
+        var entries = [PrayerTimelineEntry(date: now, prayerData: carried)]
+
+        for night in prayerData.lastThirdNights ?? [] {
+            for moment in [night.start, night.end] {
+                guard let date = PrayerData.instantFormatter.date(from: moment), date > now else { continue }
+                entries.append(PrayerTimelineEntry(date: date, prayerData: carried))
+            }
+        }
+
+        entries.sort { $0.date < $1.date }
+
+        let live = endingAtExpiry(entries, of: prayerData, refreshing: refreshDate)
+
+        return Timeline(entries: live.entries, policy: .after(live.refreshDate))
+    }
+}
+
 // MARK: - Timeline Entry
+
+// The payload dies at its expiry: drop anything scheduled at or past it and end
+// the timeline on an expired entry, so the widget turns to placeholders by
+// itself even if the system never asks for a new timeline (ADR-0002). Asking
+// daily is the belt to that pair of braces, so the refresh date moves in to
+// meet the expiry too.
+func endingAtExpiry(
+    _ entries: [PrayerTimelineEntry],
+    of prayerData: PrayerData,
+    refreshing refreshDate: Date
+) -> (entries: [PrayerTimelineEntry], refreshDate: Date) {
+    guard let expiryStart = prayerData.expiryStart else {
+        return (entries, refreshDate)
+    }
+
+    var live = entries.filter { $0.date < expiryStart }
+    live.append(PrayerTimelineEntry(date: expiryStart, prayerData: prayerData.expired(), isExpired: true))
+    return (live, min(refreshDate, expiryStart))
+}
 
 struct PrayerTimelineEntry: TimelineEntry {
     let date: Date
@@ -449,6 +642,95 @@ struct EveningPrayerWidgetView: View {
         if entry.prayerData.currentPrayer == "Maghrib" { return entry.prayerData.formatTime(entry.prayerData.maghrib) }
         if entry.prayerData.currentPrayer == "Isha" { return entry.prayerData.formatTime(entry.prayerData.isha) }
         return entry.prayerData.formatTime(entry.prayerData.asr)
+    }
+}
+
+// MARK: - Last Third Widget View
+
+// The last third of the night, on the lock screen. It borrows the Current
+// Prayer widget's bold-over-secondary shape, and can sit beside it.
+//
+// Inside the window the *wording* carries the state, not the styling: accessory
+// widgets render in a monochrome tint that discards colour and flattens
+// opacity, so the prayer screen's dimmed-outside/accented-inside treatment
+// cannot port. The secondary line keeps one fixed opacity either way. That is a
+// deliberate departure from the prayer screen, not an inconsistency.
+struct LastThirdWidgetView: View {
+    var entry: PrayerTimelineEntry
+    @Environment(\.widgetFamily) var family
+
+    // Deliberately not the moon.stars Isha uses: the two widgets can sit on the
+    // same lock screen and must not read as the same thing.
+    private let icon = "moon.haze.fill"
+    private let fajrIcon = "sunrise.fill"
+
+    // The night this entry speaks for, or nothing when the payload cannot say —
+    // past its expiry, or a night it could not compute.
+    private var night: LastThirdWindow? {
+        entry.isExpired ? nil : entry.prayerData.lastThird(at: entry.date)
+    }
+
+    private var isWithinWindow: Bool {
+        guard let night else { return false }
+        return entry.date >= night.start && entry.date < night.end
+    }
+
+    private var startText: String {
+        guard let night else { return PrayerData.placeholderTime }
+        return entry.prayerData.formatInstant(night.start)
+    }
+
+    private var fajrText: String {
+        guard let night else { return PrayerData.placeholderTime }
+        return entry.prayerData.formatInstant(night.end)
+    }
+
+    var body: some View {
+        switch family {
+        case .accessoryInline:
+            if night == nil {
+                ExpiredInlineNotice()
+            } else {
+                HStack(spacing: 4) {
+                    Image(systemName: icon)
+                    // Inside the window its start has already passed, so saying
+                    // it again would answer a question nobody is asking at 2am.
+                    Text(isWithinWindow
+                         ? "Last Third until Fajr \(fajrText)"
+                         : "Last Third: \(startText)")
+                }
+            }
+        case .accessoryRectangular:
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 4) {
+                    Image(systemName: icon)
+                        .font(.system(size: 14))
+                    // A title and a time on one line runs long under a 12-hour
+                    // preference, and the rectangular family answers a wrap by
+                    // eating the line below it. Shrink the text instead.
+                    Text(isWithinWindow ? "Last Third now" : "Last Third \(startText)")
+                        .font(.system(size: 16, weight: .bold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+                if night == nil {
+                    ExpiredNoticeText(size: 13)
+                        .opacity(0.7)
+                } else {
+                    HStack(spacing: 4) {
+                        Image(systemName: fajrIcon)
+                            .font(.system(size: 12))
+                        Text(isWithinWindow ? "Until Fajr \(fajrText)" : "Fajr \(fajrText)")
+                            .font(.system(size: 14, weight: .medium))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                    }
+                    .opacity(0.7)
+                }
+            }
+        default:
+            EmptyView()
+        }
     }
 }
 
@@ -913,6 +1195,22 @@ struct UpcomingPrayerWidget: Widget {
     }
 }
 
+struct LastThirdWidget: Widget {
+    let kind: String = "LastThirdWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: LastThirdTimelineProvider()) { entry in
+            LastThirdWidgetView(entry: entry)
+        }
+        .configurationDisplayName("Last Third")
+        .description("When the last third of the night begins")
+        .supportedFamilies([
+            .accessoryRectangular,
+            .accessoryInline
+        ])
+    }
+}
+
 // MARK: - Widget Bundle
 
 @main
@@ -922,6 +1220,7 @@ struct PrayerWidgetsBundle: WidgetBundle {
         EveningPrayerWidget()
         AllPrayersWidget()
         UpcomingPrayerWidget()
+        LastThirdWidget()
     }
 }
 
@@ -948,6 +1247,49 @@ private let previewDay2 = DayPrayerTimes(
     isha: "19:46"
 )
 
+// A night anchored to the moment the preview runs and dated by the evening it
+// opened on, so each preview shows the state it is named for wherever it runs.
+private func previewNight(
+    openedOn dayOffset: Int,
+    opensIn: TimeInterval,
+    endsIn: TimeInterval
+) -> LastThirdNight {
+    let now = Date()
+    let evening = Calendar.current.date(byAdding: .day, value: dayOffset, to: now) ?? now
+    return LastThirdNight(
+        date: PrayerData.isoFormatter.string(from: evening),
+        start: PrayerData.instantFormatter.string(from: now.addingTimeInterval(opensIn)),
+        end: PrayerData.instantFormatter.string(from: now.addingTimeInterval(endsIn))
+    )
+}
+
+// Last night's window, closed at this morning's Fajr, and tonight's ahead of
+// it — the pair the widget reads to know which night it is speaking for.
+private let previewNightsAhead = [
+    previewNight(openedOn: -1, opensIn: -9 * 3600, endsIn: -4 * 3600),
+    previewNight(openedOn: 0, opensIn: 3 * 3600, endsIn: 7 * 3600)
+]
+
+// The night in progress: opened an hour ago, Fajr two hours off.
+private let previewNightsInProgress = [
+    previewNight(openedOn: -1, opensIn: -3600, endsIn: 2 * 3600)
+]
+
+private func previewLastThirdData(nights: [LastThirdNight]) -> PrayerData {
+    PrayerData(
+        days: [previewDay, previewDay2],
+        lastThirdNights: nights,
+        currentPrayer: "Isha",
+        locationName: "Seattle, WA",
+        lastUpdated: nil,
+        accentColor: "#854ab4",
+        isDarkMode: true,
+        themePrayer: nil,
+        timeFormat: "24h",
+        expiresOn: "2025-01-20"
+    )
+}
+
 #Preview("Morning Widget", as: .accessoryRectangular) {
     MorningPrayerWidget()
 } timeline: {
@@ -955,6 +1297,7 @@ private let previewDay2 = DayPrayerTimes(
         date: Date(),
         prayerData: PrayerData(
             days: [previewDay, previewDay2],
+            lastThirdNights: [],
             currentPrayer: "Fajr",
             locationName: "Seattle, WA",
             lastUpdated: nil,
@@ -974,6 +1317,7 @@ private let previewDay2 = DayPrayerTimes(
         date: Date(),
         prayerData: PrayerData(
             days: [previewDay, previewDay2],
+            lastThirdNights: [],
             currentPrayer: "Maghrib",
             locationName: "Seattle, WA",
             lastUpdated: nil,
@@ -993,6 +1337,7 @@ private let previewDay2 = DayPrayerTimes(
         date: Date(),
         prayerData: PrayerData(
             days: [previewDay, previewDay2],
+            lastThirdNights: [],
             currentPrayer: "Dhuhr",
             locationName: "Seattle, WA",
             lastUpdated: nil,
@@ -1012,6 +1357,7 @@ private let previewDay2 = DayPrayerTimes(
         date: Date(),
         prayerData: PrayerData(
             days: [previewDay, previewDay2],
+            lastThirdNights: [],
             currentPrayer: "Dhuhr",
             locationName: "Seattle, WA",
             lastUpdated: nil,
@@ -1032,6 +1378,7 @@ private let previewDay2 = DayPrayerTimes(
         date: Date(),
         prayerData: PrayerData(
             days: [previewDay, previewDay2],
+            lastThirdNights: [],
             currentPrayer: "Asr",
             locationName: "Seattle, WA",
             lastUpdated: nil,
@@ -1041,5 +1388,42 @@ private let previewDay2 = DayPrayerTimes(
             timeFormat: "24h",
             expiresOn: "2025-01-20"
         )
+    )
+}
+
+#Preview("Last Third Widget", as: .accessoryRectangular) {
+    LastThirdWidget()
+} timeline: {
+    PrayerTimelineEntry(
+        date: Date(),
+        prayerData: previewLastThirdData(nights: previewNightsAhead)
+    )
+}
+
+#Preview("Last Third Widget (in the window)", as: .accessoryRectangular) {
+    LastThirdWidget()
+} timeline: {
+    PrayerTimelineEntry(
+        date: Date(),
+        prayerData: previewLastThirdData(nights: previewNightsInProgress)
+    )
+}
+
+#Preview("Last Third Widget (inline)", as: .accessoryInline) {
+    LastThirdWidget()
+} timeline: {
+    PrayerTimelineEntry(
+        date: Date(),
+        prayerData: previewLastThirdData(nights: previewNightsAhead)
+    )
+}
+
+#Preview("Last Third Widget (expired)", as: .accessoryRectangular) {
+    LastThirdWidget()
+} timeline: {
+    PrayerTimelineEntry(
+        date: Date(),
+        prayerData: previewLastThirdData(nights: []).expired(),
+        isExpired: true
     )
 }

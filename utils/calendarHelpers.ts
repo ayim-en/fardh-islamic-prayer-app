@@ -31,6 +31,15 @@ export const getNextISODate = (isoDate: string): string => {
   return getLocalISODate(new Date(year, month - 1, day + 1));
 };
 
+// Get the ISO date (YYYY-MM-DD) of the day before the given one. Empty for
+// anything that isn't an ISO date, for the same reason getNextISODate is.
+export const getPreviousISODate = (isoDate: string): string => {
+  if (!isISODate(isoDate)) return '';
+  const [year, month, day] = isoDate.split('-').map(Number);
+  // Day 0 rolls the Date back into the previous month or year for us.
+  return getLocalISODate(new Date(year, month - 1, day - 1));
+};
+
 // Get the current local date as ISO string (YYYY-MM-DD)
 export const getTodayISO = (): string => {
   return getLocalISODate(new Date());
