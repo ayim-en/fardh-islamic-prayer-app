@@ -73,14 +73,14 @@ export interface DayDetailSheetProps {
   onClose: () => void;
 }
 
-// "Tuesday, 9 March" — composed rather than using a single toLocaleDateString
-// call, so the day-before-month order holds on en-US as well as en-GB.
+// "Tuesday, March 9" — composed rather than using a single toLocaleDateString
+// call, so the month-before-day order holds on en-GB as well as en-US.
 const formatSheetDate = (iso: string): string => {
   const [year, month, day] = iso.split("-").map(Number);
   const date = new Date(year, month - 1, day);
   const weekday = date.toLocaleDateString(undefined, { weekday: "long" });
   const monthName = date.toLocaleDateString(undefined, { month: "long" });
-  return `${weekday}, ${day} ${monthName}`;
+  return `${weekday}, ${monthName} ${day}`;
 };
 
 export const DayDetailSheet = ({

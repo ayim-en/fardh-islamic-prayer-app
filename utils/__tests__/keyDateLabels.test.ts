@@ -13,9 +13,8 @@ describe("formatKeyDateLabels", () => {
   describe("with Gregorian as the primary date system", () => {
     const labels = () => formatKeyDateLabels(KEY_DATE, "gregorian");
 
-    it("shows the day and the abbreviated Gregorian month", () => {
-      expect(labels().row).toContain("18");
-      expect(labels().row).toContain("Sep");
+    it("shows the abbreviated Gregorian month and the day", () => {
+      expect(labels().row).toBe("Sep 18");
     });
 
     it("leaves the year to the countdown beside it", () => {
@@ -38,8 +37,8 @@ describe("formatKeyDateLabels", () => {
       expect(labels().row).not.toContain("1448");
     });
 
-    it("expands to a full Gregorian date in the same day-month-year order", () => {
-      expect(labels().body).toBe("18 September 2026");
+    it("expands to a full Gregorian date in the calendar header's format", () => {
+      expect(labels().body).toBe("September 18, 2026");
     });
   });
 
@@ -49,8 +48,7 @@ describe("formatKeyDateLabels", () => {
     const labels = () => formatKeyDateLabels(outOfRange, "hijri");
 
     it("falls back to the Gregorian short form", () => {
-      expect(labels().row).toContain("18");
-      expect(labels().row).toContain("Sep");
+      expect(labels().row).toBe("Sep 18");
     });
 
     it("still expands to the other system, whatever the record holds", () => {
@@ -79,7 +77,7 @@ describe("formatKeyDateLabels", () => {
     });
 
     it("carries the year in the expanded body instead", () => {
-      expect(formatKeyDateLabels(nextYear, "hijri").body).toBe("15 August 2027");
+      expect(formatKeyDateLabels(nextYear, "hijri").body).toBe("August 15, 2027");
       expect(formatKeyDateLabels(nextYear, "gregorian").body).toBe(
         "12 Rabīʿ al-awwal 1449"
       );

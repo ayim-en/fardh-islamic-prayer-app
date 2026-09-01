@@ -52,21 +52,18 @@ const toLocalDate = (iso: string): Date => {
 const gregorianForms = (iso: string): DateForms & { short: string } => {
   const date = toLocalDate(iso);
   return {
-    // "18 Sep" — no year, since the countdown beside it carries the distance.
-    // Left to the locale, so a device set to en-US reads "Sep 18" as it does
-    // elsewhere in the app.
-    short: date.toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
-    }),
-    // "18 September 2026" — composed rather than one toLocaleDateString call so
-    // the day-month-year order mirrors the Hijri full label it stands in for,
-    // on en-US as well as en-GB. Deliberately not the day sheet's format, which
-    // leads with a weekday: that earns its place on a day you just tapped, and
-    // is noise on a date months away.
-    full: `${date.getDate()} ${date.toLocaleDateString(undefined, {
+    // "Sep 18" — no year, since the countdown beside it carries the distance.
+    // Composed rather than left to the locale so the month-before-day order
+    // holds on en-GB as well as en-US, as it does everywhere else Gregorian
+    // dates are written here.
+    short: `${date.toLocaleDateString(undefined, { month: "short" })} ${date.getDate()}`,
+    // "September 18, 2026" — the calendar header's format exactly, since both
+    // state a full Gregorian date and nothing distinguishes them. Deliberately
+    // not the day sheet's, which leads with a weekday: that earns its place on
+    // a day you just tapped, and is noise on a date months away.
+    full: `${date.toLocaleDateString(undefined, {
       month: "long",
-    })} ${date.getFullYear()}`,
+    })} ${date.getDate()}, ${date.getFullYear()}`,
   };
 };
 
