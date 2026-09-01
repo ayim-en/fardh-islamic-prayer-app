@@ -47,18 +47,20 @@ const TEXT_BOUNDS = {
 // Bounded by WIDTH as well as height, so the size stays put all year. Without
 // the width bound the declared size holds for "May 13, 2026" but
 // adjustsFontSizeToFit quietly shrinks "September 13, 2026", and the header
-// changes size from one month to the next. Longest strings each system has to
-// hold: 18 chars Gregorian, 25 Hijri ("28 Jumādá al-ākhirah 1448"). The budget
-// follows the label into whichever line it lands in, so a Hijri-primary header
-// sizes its big line against 25 characters rather than 18.
+// changes size from one month to the next. The budget follows the label into
+// whichever line it lands in, so a Hijri-primary header sizes its big line
+// against "30 Jumādá al-ākhirah 1448" rather than against a Gregorian date.
 //
-// Width is the binding constraint on every phone, so these two char-width
-// figures set the type size in practice — the height ratios below only bite on
-// unusually short screens. Both were measured off the design mockup rather than
-// estimated: "11 August 2026" set 6.65em wide over 14 characters.
-const MAX_CHARS = { gregorian: 18, hijri: 25 };
-const BOLD_CHAR_WIDTH = 0.475; // em, measured against the system face
-const SEMIBOLD_CHAR_WIDTH = 0.46;
+// Width is the binding constraint on every phone, so these figures set the type
+// size in practice — the height clamps below only bite on unusually short
+// screens. They are the width of each system's longest label in ems of the
+// rendered size, measured with CoreText in the system face at the sizes these
+// lines actually use, then rounded up a notch so the longest label of the year
+// lands inside its line rather than on the edge. An earlier estimate of
+// 0.475em per character ran ~9% narrow, which left the longest months quietly
+// shrinking — exactly what the width bound exists to prevent.
+const LEADING_EM = { gregorian: 9.5, hijri: 13.0 }; // bold, as the heading renders
+const TRAILING_EM = { gregorian: 9.3, hijri: 12.7 }; // semibold
 
 // The mockup sets the secondary line at just under half the primary one (digit
 // heights 27px against 57px). Deriving it as a ratio rather than clamping it
@@ -67,29 +69,37 @@ const SEMIBOLD_CHAR_WIDTH = 0.46;
 // headings rather than a date and its subtitle.
 const SECONDARY_RATIO = 0.55;
 
+// A ratio alone would drag the secondary line down with the primary. A Hijri
+// heading is half again as wide as a Gregorian one, so it takes a smaller size
+// — and the short date beneath it, which has width to spare, would inherit that
+// squeeze and land a third smaller than the same line in the opposite mode.
+// This floor holds it up: the same role reads at about the same size whichever
+// system leads. Scaled with the header, and capped below the ratio's own range,
+// so it lifts the line without letting it rival the heading.
+const secondaryFloor = (headerHeight: number) =>
+  Math.max(18, Math.min(21, headerHeight * 0.082));
+
 const scaleType = (
   headerHeight: number,
   width: number,
-  maxChars: { leading: number; trailing: number }
+  em: { leading: number; trailing: number }
 ) => {
   const usable = width - HORIZONTAL_PADDING * 2;
   // Width caps both lines outright — a floor allowed to overrule it would hand
   // the fitting back to adjustsFontSizeToFit, which measures the string in
   // front of it, and the header would change size from one month to the next.
-  // That matters most with Hijri leading, where 25 characters buy a smaller
-  // line than the floor would like.
   const leading = Math.floor(
-    Math.min(
-      usable / (maxChars.leading * BOLD_CHAR_WIDTH),
-      Math.max(34, Math.min(52, headerHeight * 0.24))
-    )
+    Math.min(usable / em.leading, Math.max(34, Math.min(52, headerHeight * 0.24)))
   );
   return {
     leading,
     trailing: Math.floor(
       Math.min(
-        usable / (maxChars.trailing * SEMIBOLD_CHAR_WIDTH),
-        Math.max(18, Math.min(26, leading * SECONDARY_RATIO))
+        usable / em.trailing,
+        Math.max(
+          secondaryFloor(headerHeight),
+          Math.min(26, leading * SECONDARY_RATIO)
+        )
       )
     ),
   };
@@ -116,7 +126,11 @@ export const CalendarHeader = ({
 }: CalendarHeaderProps) => {
   const { width } = useWindowDimensions();
   const height = containerHeight * HEIGHT_RATIO;
-  const type = scaleType(height, width, resolveBySystem(primaryDateSystem, MAX_CHARS));
+  // Each line is measured against the system whose label lands in it.
+  const type = scaleType(height, width, {
+    leading: resolveBySystem(primaryDateSystem, LEADING_EM).leading,
+    trailing: resolveBySystem(primaryDateSystem, TRAILING_EM).trailing,
+  });
   // Until the cache lands there is no Hijri date, so with Hijri primary the
   // known Gregorian one leads and the second line is briefly empty. Only the
   // content moves: both sizes are fixed by the setting, not by what is in them.
