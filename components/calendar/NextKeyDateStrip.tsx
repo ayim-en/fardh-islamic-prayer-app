@@ -1,4 +1,5 @@
 import { AnimatedTintIcon } from "@/components/AnimatedTintIcon";
+import type { PrimaryDateSystem } from "@/constants/calendarSettings";
 import { IMPORTANT_DATE_DESCRIPTIONS } from "@/constants/importantDates";
 import { darkModeColors, lightModeColors } from "@/constants/prayers";
 import {
@@ -6,6 +7,7 @@ import {
   useAnimatedTextColor,
 } from "@/hooks/useAnimatedColor";
 import type { NextKeyDate } from "@/utils/hijriCalendar";
+import { formatKeyDateLabels } from "@/utils/keyDateLabels";
 import React, { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import Animated, {
@@ -29,18 +31,11 @@ export interface NextKeyDateStripProps {
   nextKeyDate: NextKeyDate | null;
   /** Null while the calendar cache is still loading. */
   isLoading: boolean;
+  /** Which system the row's date is stated in; the body shows the other. */
+  primaryDateSystem: PrimaryDateSystem;
   colors: { active: string; inactive: string };
   isDarkMode: boolean;
 }
-
-// "5 Jan" — short form, since the count carries the precision.
-const formatShortDate = (iso: string): string => {
-  const [year, month, day] = iso.split("-").map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-  });
-};
 
 const formatDaysAway = (days: number): string => {
   if (days === 0) return "today";
@@ -66,6 +61,7 @@ export const NextKeyDateStrip = ({
   contentInset,
   nextKeyDate,
   isLoading,
+  primaryDateSystem,
   colors,
   isDarkMode,
 }: NextKeyDateStripProps) => {
@@ -92,6 +88,14 @@ export const NextKeyDateStrip = ({
   useEffect(() => {
     setIsExpanded(false);
   }, [nextKeyDate?.iso]);
+
+  // The row's date and the body's, resolved together so the two can never
+  // state the same system twice. Null while there is no key date to state.
+  const dateLabels = nextKeyDate
+    ? formatKeyDateLabels(nextKeyDate, primaryDateSystem)
+    : null;
+
+  const daysAway = nextKeyDate ? formatDaysAway(nextKeyDate.daysAway) : null;
 
   const label = isLoading
     ? "Loading key dates…"
@@ -122,7 +126,7 @@ export const NextKeyDateStrip = ({
             onPress={() => setIsExpanded((previous) => !previous)}
             accessibilityRole="button"
             accessibilityState={{ expanded: isExpanded }}
-            accessibilityLabel={`Next key date: ${nextKeyDate!.name}`}
+            accessibilityLabel={`Next key date: ${nextKeyDate!.name}, ${dateLabels!.row}, ${daysAway}`}
           >
             <Animated.Text
               className="text-[11px] font-bold uppercase tracking-wider"
@@ -146,7 +150,7 @@ export const NextKeyDateStrip = ({
               style={labelStyle}
               numberOfLines={1}
             >
-              {formatShortDate(nextKeyDate!.iso)} · {formatDaysAway(nextKeyDate!.daysAway)}
+              {dateLabels!.row} · {daysAway}
             </Animated.Text>
             {/* Points the way the content travels: up while the body is still
                 folded away below the row, down once it's open and the arrow's
@@ -164,13 +168,16 @@ export const NextKeyDateStrip = ({
               exiting={FadeOut.duration(110)}
               className="pb-5"
             >
-              {/* Accent, exactly as the day sheet sets its Hijri line — the
-                  two are the same statement about the same date. */}
+              {/* The full date in whichever system the row above is not
+                  using: with the row now leading in the primary system, a
+                  heading in that same system would only restate the line above
+                  it. Accent and type taken from the day sheet's secondary date
+                  line, which answers the same question one level down. */}
               <Animated.Text
                 className="text-[11.5px] font-semibold mb-2"
                 style={nameStyle}
               >
-                {nextKeyDate!.hijriLabel}
+                {dateLabels!.body}
               </Animated.Text>
 
               <ScrollView

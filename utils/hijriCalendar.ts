@@ -94,7 +94,14 @@ export interface NextKeyDate {
   name: string; // first entry when a day carries several
   names: string[];
   daysAway: number; // 0 = today
-  hijriLabel: string; // "1 Shawwāl 1448" — shown when the strip expands
+  hijriDay: number;
+  hijriMonth: number; // 1-12
+  /**
+   * "1 Shawwāl 1448". The day and month above are carried separately because
+   * the strip composes a short Hijri form of its own when Hijri leads — see
+   * utils/keyDateLabels.ts.
+   */
+  hijriFullLabel: string;
 }
 
 // Whole days between two ISO dates. Uses Date.UTC because subtracting two local
@@ -122,7 +129,9 @@ export const findNextKeyDate = (
     name: info.keyDates[0],
     names: info.keyDates,
     daysAway: daysBetweenIso(todayIso, iso),
-    hijriLabel: info.hijriFullLabel,
+    hijriDay: info.hijriDay,
+    hijriMonth: info.hijriMonth,
+    hijriFullLabel: info.hijriFullLabel,
   };
 };
 

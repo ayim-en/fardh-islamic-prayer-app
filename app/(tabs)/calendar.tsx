@@ -261,6 +261,7 @@ export default function CalendarScreen() {
               contentInset={contentInset}
               nextKeyDate={nextKeyDate}
               isLoading={calendarDays === null}
+              primaryDateSystem={calendarSettings.primaryDateSystem}
               colors={colors}
               isDarkMode={isDarkMode}
             />
