@@ -69,15 +69,32 @@ const TRAILING_EM = { gregorian: 9.3, hijri: 12.7 }; // semibold
 // headings rather than a date and its subtitle.
 const SECONDARY_RATIO = 0.55;
 
+// Width caps the heading outright — a floor allowed to overrule it would hand
+// the fitting back to adjustsFontSizeToFit, which measures the string in front
+// of it, and the header would change size from one month to the next.
+const leadingSize = (headerHeight: number, widthCap: number) =>
+  Math.min(widthCap, Math.max(34, Math.min(52, headerHeight * 0.24)));
+
 // A ratio alone would drag the secondary line down with the primary. A Hijri
 // heading is half again as wide as a Gregorian one, so it takes a smaller size
 // — and the short date beneath it, which has width to spare, would inherit that
-// squeeze and land a third smaller than the same line in the opposite mode.
-// This floor holds it up: the same role reads at about the same size whichever
-// system leads. Scaled with the header, and capped below the ratio's own range,
-// so it lifts the line without letting it rival the heading.
-const secondaryFloor = (headerHeight: number) =>
-  Math.max(18, Math.min(21, headerHeight * 0.082));
+// squeeze and read as an afterthought rather than as the other half of the
+// date.
+//
+// So the line has a size of its own to fall back on: the size it takes when the
+// Gregorian date leads. That is this same expression with the Gregorian budget,
+// which is why the two modes now put their second line at exactly the same
+// size on every device rather than within a point of each other. The ratio
+// still governs wherever it gives more.
+//
+// The pair survives the closer sizes because size was never the only thing
+// marking this line as secondary: it is semibold against bold, and muted
+// against white, under a heading that is physically much the wider of the two.
+const secondaryTarget = (headerHeight: number, usable: number) =>
+  Math.min(
+    26,
+    leadingSize(headerHeight, usable / LEADING_EM.gregorian) * SECONDARY_RATIO
+  );
 
 const scaleType = (
   headerHeight: number,
@@ -85,19 +102,14 @@ const scaleType = (
   em: { leading: number; trailing: number }
 ) => {
   const usable = width - HORIZONTAL_PADDING * 2;
-  // Width caps both lines outright — a floor allowed to overrule it would hand
-  // the fitting back to adjustsFontSizeToFit, which measures the string in
-  // front of it, and the header would change size from one month to the next.
-  const leading = Math.floor(
-    Math.min(usable / em.leading, Math.max(34, Math.min(52, headerHeight * 0.24)))
-  );
+  const leading = leadingSize(headerHeight, usable / em.leading);
   return {
-    leading,
+    leading: Math.floor(leading),
     trailing: Math.floor(
       Math.min(
         usable / em.trailing,
         Math.max(
-          secondaryFloor(headerHeight),
+          secondaryTarget(headerHeight, usable),
           Math.min(26, leading * SECONDARY_RATIO)
         )
       )
