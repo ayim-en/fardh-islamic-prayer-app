@@ -1,6 +1,8 @@
 import { AnimatedTintIcon } from "@/components/AnimatedTintIcon";
+import type { PrimaryDateSystem } from "@/constants/calendarSettings";
 import { darkModeColors, lightModeColors } from "@/constants/prayers";
 import { useAnimatedTextColor } from "@/hooks/useAnimatedColor";
+import { resolveBothDateLabels } from "@/utils/dateSystemHelpers";
 import type { MonthPageData } from "@/utils/hijriCalendar";
 import React, {
   forwardRef,
@@ -59,6 +61,8 @@ export interface MonthGridPagerProps {
   contentInset: number;
   colors: { active: string; inactive: string };
   isDarkMode: boolean;
+  /** Which system leads the month bar and the day cells. */
+  primaryDateSystem: PrimaryDateSystem;
   onDayPress: (iso: string) => void;
 }
 
@@ -76,6 +80,7 @@ export const MonthGridPager = forwardRef<MonthGridPagerRef, MonthGridPagerProps>
       contentInset,
       colors,
       isDarkMode,
+      primaryDateSystem,
       onDayPress,
     },
     ref
@@ -91,8 +96,10 @@ export const MonthGridPager = forwardRef<MonthGridPagerRef, MonthGridPagerProps>
 
     const inkColor = isDarkMode ? darkModeColors.text : lightModeColors.text;
     const titleStyle = useAnimatedTextColor(inkColor);
-    // Theme accent, so the Hijri span retints with the prayer alongside the
-    // chevrons beside it and the key-date name in the strip below.
+    // Theme accent, so the second line retints with the prayer alongside the
+    // chevrons beside it and the key-date name in the strip below. The
+    // treatment belongs to the slot, not to the system in it: the heading is
+    // ink and the line under it is accent, whichever date each holds.
     const spanStyle = useAnimatedTextColor(colors.active);
     // The theme's secondary tone, matching the Hijri numerals in the grid.
     const weekdayStyle = useAnimatedTextColor(colors.inactive);
@@ -176,21 +183,40 @@ export const MonthGridPager = forwardRef<MonthGridPagerRef, MonthGridPagerProps>
           cellHeight={cellHeight}
           gridSide={gridSide}
           selectedIso={selectedIso}
+          primaryDateSystem={primaryDateSystem}
           onDayPress={onDayPress}
           styles={cellStyles}
         />
       ),
-      [pageWidth, cellHeight, gridSide, selectedIso, onDayPress, cellStyles]
+      [
+        pageWidth,
+        cellHeight,
+        gridSide,
+        selectedIso,
+        primaryDateSystem,
+        onDayPress,
+        cellStyles,
+      ]
     );
 
     const extraData = useMemo(
-      () => [selectedIso, cellStyles, cellHeight],
-      [selectedIso, cellStyles, cellHeight]
+      () => [selectedIso, cellStyles, cellHeight, primaryDateSystem],
+      [selectedIso, cellStyles, cellHeight, primaryDateSystem]
     );
 
     const current = pages[pageIndex];
     const atStart = pageIndex <= 0;
     const atEnd = pageIndex >= pages.length - 1;
+
+    // Paging stays Gregorian whichever system leads (see the screen), so the
+    // page is still a Gregorian month — this only decides which of its two
+    // names is the heading and which is the span beneath it. Both are shown in
+    // either mode; until the cache lands there is no span, and the month's
+    // Gregorian name heads the bar on its own.
+    const monthLabels = resolveBothDateLabels(primaryDateSystem, {
+      gregorian: current?.title ?? null,
+      hijri: current?.hijriSpan ?? null,
+    });
 
     return (
       <View style={{ paddingTop: topPadding }}>
@@ -209,7 +235,7 @@ export const MonthGridPager = forwardRef<MonthGridPagerRef, MonthGridPagerProps>
               numberOfLines={1}
               adjustsFontSizeToFit
             >
-              {current?.title ?? ""}
+              {monthLabels.leading}
             </Animated.Text>
             <Animated.Text
               className="text-[14px] font-semibold mt-0.5"
@@ -217,7 +243,7 @@ export const MonthGridPager = forwardRef<MonthGridPagerRef, MonthGridPagerProps>
               numberOfLines={1}
               adjustsFontSizeToFit
             >
-              {current?.hijriSpan ?? ""}
+              {monthLabels.trailing}
             </Animated.Text>
           </View>
 

@@ -1,3 +1,5 @@
+import type { PrimaryDateSystem } from "@/constants/calendarSettings";
+import { resolveBothDateLabels } from "@/utils/dateSystemHelpers";
 import React, { memo } from "react";
 import { Pressable, StyleSheet } from "react-native";
 import Animated from "react-native-reanimated";
@@ -6,14 +8,18 @@ import type { CellStyleBundle } from "./cellStyles";
 
 // Type scales with the cell so a taller row reads as a bigger calendar rather
 // than the same small numerals adrift in whitespace. Floors keep a cramped
-// device legible; ceilings stop the Hijri label outgrowing its ~51pt column —
+// device legible; ceilings stop a label outgrowing its ~51pt column —
 // "1 Rab II" is the longest string any cell has to hold.
+//
+// Sizes belong to the slot, not to the system: the primary date leads at the
+// larger size whichever system it is, and both lines shrink to fit rather than
+// clipping when the Hijri label lands in the leading one on a month boundary.
 //
 // Ratios come from the mockup, where a 58pt row carried a 20.6pt numeral over a
 // 13.8pt Hijri line.
 const scaleType = (height: number) => ({
-  gregorian: Math.round(Math.max(16, Math.min(24, height * 0.34))),
-  hijri: Math.round(Math.max(11, Math.min(15, height * 0.23))),
+  leading: Math.round(Math.max(16, Math.min(24, height * 0.34))),
+  trailing: Math.round(Math.max(11, Math.min(15, height * 0.23))),
 });
 
 // Faded rather than recoloured. A plain opacity adds no useAnimatedStyle
@@ -30,6 +36,8 @@ export interface DayCellProps {
   /** Belongs to the previous or next month. */
   isOutside: boolean;
   isSelected: boolean;
+  /** Which system this cell leads with, at the larger size. */
+  primaryDateSystem: PrimaryDateSystem;
   hasKeyDate: boolean;
   height: number;
   onPress: (iso: string) => void;
@@ -56,12 +64,28 @@ export const DayCell = memo(function DayCell({
   isHijriMonthStart,
   isOutside,
   isSelected,
+  primaryDateSystem,
   hasKeyDate,
   height,
   onPress,
   styles,
 }: DayCellProps) {
   const type = scaleType(height);
+
+  // Both dates, sorted into the slot each belongs in. The Hijri label carries
+  // its own month-boundary marker ("1 Rab I") and the accent that goes with it,
+  // so what is accented travels with the label rather than with the slot —
+  // except selection, which marks the day itself and so lands on whichever
+  // label leads. A day the cache hasn't reached has no Hijri label at all, and
+  // the resolver promotes the Gregorian numeral into the leading slot rather
+  // than leaving the cell headed by a blank.
+  const labels = resolveBothDateLabels(primaryDateSystem, {
+    gregorian: String(gregorianDay),
+    hijri: hijriLabel,
+  });
+  const hijriLeads = primaryDateSystem === "hijri";
+  const leadingIsAccented = isSelected || (hijriLeads && isHijriMonthStart);
+  const trailingIsAccented = !hijriLeads && isHijriMonthStart;
 
   return (
     <Pressable
@@ -75,37 +99,41 @@ export const DayCell = memo(function DayCell({
       }}
       accessibilityRole="button"
     >
-      {/* Selection is the ONE property here that flips while a cell stays
-          mounted, so this is the one place the single-style-source rule can't
-          hold. The key forces a remount on toggle: without it, Reanimated
-          leaves the previously applied colour on the UI thread and the day
-          stays accent-coloured after being deselected. */}
+      {/* Selection and the primary date system are the two properties here
+          that flip while a cell stays mounted, so this is where the
+          single-style-source rule can't hold. The key forces a remount on
+          either: without it, Reanimated leaves the previously applied colour on
+          the UI thread and the day stays accent-coloured after being
+          deselected — or after the system it was leading with changed. */}
       <Animated.Text
-        key={isSelected ? "selected" : "default"}
+        key={`${primaryDateSystem}-${isSelected ? "selected" : "default"}`}
         style={[
-          sheet.gregorian,
-          { fontSize: type.gregorian, lineHeight: type.gregorian + 3 },
-          isSelected ? styles.accent : styles.gregorian,
+          sheet.leading,
+          { fontSize: type.leading, lineHeight: type.leading + 3 },
+          leadingIsAccented ? styles.accent : styles.ink,
         ]}
+        numberOfLines={1}
+        // A leading Hijri label carries "1 Rab II" rather than a bare numeral;
+        // shrink to fit rather than clipping if a column runs narrow.
+        adjustsFontSizeToFit
       >
-        {gregorianDay}
+        {labels.leading}
       </Animated.Text>
 
       {/* Rendered unconditionally with a fixed line height so the grid does not
           grow when the Hijri cache resolves mid-session. */}
       <Animated.Text
+        key={primaryDateSystem}
         style={[
-          sheet.hijri,
-          { fontSize: type.hijri, lineHeight: type.hijri + 3 },
-          isHijriMonthStart ? styles.accent : styles.hijri,
-          isHijriMonthStart && sheet.hijriStrong,
+          sheet.trailing,
+          { fontSize: type.trailing, lineHeight: type.trailing + 3 },
+          trailingIsAccented ? styles.accent : styles.muted,
+          trailingIsAccented && sheet.trailingStrong,
         ]}
         numberOfLines={1}
-        // Month-boundary cells carry "1 Rab II" rather than a bare numeral;
-        // shrink to fit rather than clipping if a column runs narrow.
         adjustsFontSizeToFit
       >
-        {hijriLabel ?? ""}
+        {labels.trailing}
       </Animated.Text>
 
       {hasKeyDate && <Animated.View style={[sheet.dot, styles.dot]} />}
@@ -115,15 +143,15 @@ export const DayCell = memo(function DayCell({
 
 // Sizes live inline (see scaleType) — these hold only what doesn't vary.
 const sheet = StyleSheet.create({
-  gregorian: {
+  leading: {
     fontWeight: "700",
     fontVariant: ["tabular-nums"],
   },
-  hijri: {
+  trailing: {
     fontWeight: "600",
     fontVariant: ["tabular-nums"],
   },
-  hijriStrong: {
+  trailingStrong: {
     fontWeight: "700",
   },
   dot: {

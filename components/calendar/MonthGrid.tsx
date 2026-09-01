@@ -1,3 +1,4 @@
+import type { PrimaryDateSystem } from "@/constants/calendarSettings";
 import type { GridCell } from "@/utils/hijriCalendar";
 import React, { memo, useMemo } from "react";
 import { View } from "react-native";
@@ -17,6 +18,8 @@ export interface MonthGridProps {
   /** Side of the square the grid occupies. */
   gridSide: number;
   selectedIso: string | null;
+  /** Which system each cell leads with. */
+  primaryDateSystem: PrimaryDateSystem;
   onDayPress: (iso: string) => void;
   styles: CellStyleBundle;
 }
@@ -29,6 +32,7 @@ export const MonthGrid = memo(function MonthGrid({
   cellHeight,
   gridSide,
   selectedIso,
+  primaryDateSystem,
   onDayPress,
   styles,
 }: MonthGridProps) {
@@ -56,6 +60,7 @@ export const MonthGrid = memo(function MonthGrid({
                 isHijriMonthStart={cell.isHijriMonthStart}
                 isOutside={cell.isOutside}
                 isSelected={cell.iso === selectedIso}
+                primaryDateSystem={primaryDateSystem}
                 hasKeyDate={cell.hasKeyDate}
                 height={cellHeight}
                 onPress={onDayPress}

@@ -9,9 +9,11 @@ import {
   Prayers,
   type Prayer,
 } from "@/constants/prayers";
+import type { PrimaryDateSystem } from "@/constants/calendarSettings";
 import type { TimeFormat } from "@/constants/prayerSettings";
 import type { Timings } from "@/prayer-api/prayerTimesAPI";
 import { getTodayISO } from "@/utils/calendarHelpers";
+import { resolveBothDateLabels } from "@/utils/dateSystemHelpers";
 import { formatTimeWithPreference } from "@/utils/prayerHelpers";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -64,6 +66,8 @@ export interface DayDetailSheetProps {
   /** The prayer in progress right now, app-wide. Only marked on today's sheet. */
   currentPrayer: Prayer | null;
   timeFormat: TimeFormat;
+  /** Which system titles the sheet; the other sits beneath it. */
+  primaryDateSystem: PrimaryDateSystem;
   isDarkMode: boolean;
   colors: { active: string; inactive: string };
   onClose: () => void;
@@ -87,6 +91,7 @@ export const DayDetailSheet = ({
   prayerTimes,
   currentPrayer,
   timeFormat,
+  primaryDateSystem,
   isDarkMode,
   colors,
   onClose,
@@ -112,6 +117,13 @@ export const DayDetailSheet = ({
   // Note this is the prayer in progress, NOT the next one due. After Isha
   // nothing is marked until Fajr rolls the date over onto tomorrow's sheet.
   const markedPrayer = iso === getTodayISO() ? currentPrayer : null;
+
+  // The title and the line under it. Size and colour belong to the slot — the
+  // title is ink, the line beneath it accent — so only the dates move.
+  const labels = resolveBothDateLabels(primaryDateSystem, {
+    gregorian: iso ? formatSheetDate(iso) : null,
+    hijri: hijriLabel,
+  });
 
   // Modal keeps children mounted when visible flips false, so without this the
   // next open would inherit the previous day's expansion.
@@ -216,20 +228,20 @@ export const DayDetailSheet = ({
                 style={{ color: themeColors.text, letterSpacing: -0.38 }}
                 accessibilityRole="header"
               >
-                {iso ? formatSheetDate(iso) : ""}
+                {labels.leading}
               </Text>
               {/* Transliteration only — no Arabic script anywhere in this
                   design. Full accent rather than the grid's muted Hijri tone:
                   in a cell it sits under a numeral and has to recede, but here
                   it's the second half of the sheet's title. */}
-              {hijriLabel && (
+              {labels.trailing ? (
                 <Text
                   className="text-[11.5px] font-semibold mt-px"
                   style={{ color: colors.active }}
                 >
-                  {hijriLabel}
+                  {labels.trailing}
                 </Text>
-              )}
+              ) : null}
 
               {keyDates.length > 0 && (
                 <ScrollView className="max-h-64 mt-3" showsVerticalScrollIndicator={false}>

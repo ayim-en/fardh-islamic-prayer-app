@@ -225,6 +225,7 @@ export default function CalendarScreen() {
         containerHeight={containerHeight}
         gregorianLabel={formatHeaderDate(todayIso)}
         hijriLabel={todayInfo?.hijriFullLabel ?? null}
+        primaryDateSystem={calendarSettings.primaryDateSystem}
         backgroundImage={backgroundImage}
       />
 
@@ -248,6 +249,7 @@ export default function CalendarScreen() {
               contentInset={contentInset}
               colors={colors}
               isDarkMode={isDarkMode}
+              primaryDateSystem={calendarSettings.primaryDateSystem}
               onDayPress={handleDayPress}
             />
             {/* Bottom-anchored by its own absolute positioning, so expanding
@@ -274,6 +276,7 @@ export default function CalendarScreen() {
         prayerTimes={selectedTimings ?? null}
         currentPrayer={(prayerInProgress?.prayer as Prayer) ?? null}
         timeFormat={prayerSettings.timeFormat}
+        primaryDateSystem={calendarSettings.primaryDateSystem}
         isDarkMode={isDarkMode}
         colors={colors}
         onClose={() => setIsSheetOpen(false)}
