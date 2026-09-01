@@ -53,13 +53,25 @@ const TEXT_BOUNDS = {
 //
 // Width is the binding constraint on every phone, so these figures set the type
 // size in practice — the height clamps below only bite on unusually short
-// screens. They are the width of each system's longest label in ems of the
-// rendered size, measured with CoreText in the system face at the sizes these
-// lines actually use, then rounded up a notch so the longest label of the year
-// lands inside its line rather than on the edge. An earlier estimate of
-// 0.475em per character ran ~9% narrow, which left the longest months quietly
-// shrinking — exactly what the width bound exists to prevent.
-const LEADING_EM = { gregorian: 9.5, hijri: 13.0 }; // bold, as the heading renders
+// screens. They are label widths in ems of the rendered size, measured with
+// CoreText in the system face across all twelve months of both systems.
+//
+// The heading is budgeted at the ninth-widest of the twelve rather than the
+// widest. Both systems have a long tail: "September 30, 2026" runs 9.55em
+// against a 7.97em median, and "30 Jumādá al-ākhirah 1448" runs 12.82em where
+// the other eleven Hijri months all fit inside 10.84em. Sizing for those
+// outliers docks every other month of the year — 18% in the Hijri case — for a
+// string seen one month in twelve. So nine months render at the full size and
+// the longest few shrink a little: September by 8%, Jumādá al-ākhirah by 15%,
+// the rest imperceptibly.
+//
+// The width bound is still what keeps that shrinking bounded and rare. What it
+// is budgeted against is the judgement: the label most months actually carry,
+// not the worst one the year can produce.
+const LEADING_EM = { gregorian: 8.6, hijri: 10.8 }; // bold, as the heading renders
+// The second line is sized by the ratio below rather than by its own width, so
+// these are the true maxima — they only ever act as a ceiling, and at the sizes
+// that line takes they never bind.
 const TRAILING_EM = { gregorian: 9.3, hijri: 12.7 }; // semibold
 
 // The mockup sets the secondary line at just under half the primary one (digit
