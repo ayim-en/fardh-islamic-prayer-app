@@ -152,11 +152,13 @@ export const NextKeyDateStrip = ({
             >
               {dateLabels!.row} · {daysAway}
             </Animated.Text>
-            {/* Points the way the content travels: up while the body is still
-                folded away below the row, down once it's open and the arrow's
-                job is to put it back. */}
+            {/* Down while collapsed, up once open — the disclosure
+                convention every other expander in the app follows, and the one
+                a reader arrives with. The row does ride upward as the body
+                opens beneath it, but nobody reads the arrow as a report on the
+                row's own travel. */}
             <View
-              style={{ transform: [{ rotate: isExpanded ? "0deg" : "180deg" }] }}
+              style={{ transform: [{ rotate: isExpanded ? "180deg" : "0deg" }] }}
             >
               <AnimatedTintIcon source={chevronIcon} size={18} tintColor={colors.active} />
             </View>

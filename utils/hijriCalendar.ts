@@ -221,7 +221,7 @@ export const buildMonthCells = (
   return cells;
 };
 
-// "Ṣafar 1448" | "Ṣafar — Rabīʿ al-awwal 1448" | "Dhū al-Ḥijjah 1448 — Muḥarram 1449"
+// "Ṣafar 1448" | "Ṣafar - Rabīʿ al-awwal 1448" | "Dhū al-Ḥijjah 1448 - Muḥarram 1449"
 // Uses the first and last cached day rather than assuming exactly two months: a
 // 31-day Gregorian month can touch three Hijri months (tail of A + all 29 of B
 // + head of C), and a partially-cached month can have gaps in the middle.
@@ -254,10 +254,10 @@ export const buildHijriSpanLabel = (
   }
 
   if (first.hijriYear === last.hijriYear) {
-    return `${firstName} — ${lastName} ${first.hijriYear}`;
+    return `${firstName} - ${lastName} ${first.hijriYear}`;
   }
 
-  return `${firstName} ${first.hijriYear} — ${lastName} ${last.hijriYear}`;
+  return `${firstName} ${first.hijriYear} - ${lastName} ${last.hijriYear}`;
 };
 
 // ---------------------------------------------------------------- page data

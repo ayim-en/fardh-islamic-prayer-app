@@ -68,7 +68,7 @@ export const prayerThemeColors = {
 export const lightModeColors = {
   background: "#ffffff",
   backgroundSecondary: "#f9fafb",
-  text: "#000000",
+  text: "#374151",
   textSecondary: "#374151",
   textTertiary: "#4b5563",
   disabledText: "#d9e1e8",
