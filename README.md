@@ -2,7 +2,11 @@
 
 Cross-platform mobile app with real-time prayer time calculations supporting 24 calculation methods and dual juristic schools, currently undergoing final testing through Test Flight
 
-<img width="1920" height="1080" alt="fardh-readme" src="https://github.com/user-attachments/assets/9fa3a8ba-435b-4397-b586-3d51e1479be5" />
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/images/github-repo/fardh-github-labelled-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="assets/images/github-repo/fardh-github-labelled-light.png">
+  <img alt="Fardh on iPhone: prayer times, precise qibla, dual calendar and dynamic home screen widgets" src="assets/images/github-repo/fardh-github-labelled-light.png">
+</picture>
 
 ## ✨ Features
 
