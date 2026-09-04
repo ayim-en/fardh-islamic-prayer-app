@@ -11,21 +11,24 @@
         "simulator": false,
         "image": "macos-sequoia-15.6-xcode-26.2",
         "node": "20.18.0"
-      }
+      },
+      "channel": "development"
     },
     "preview": {
       "distribution": "internal",
       "ios": {
         "image": "macos-sequoia-15.6-xcode-26.2",
         "node": "20.18.0"
-      }
+      },
+      "channel": "preview"
     },
     "production": {
       "autoIncrement": true,
       "ios": {
         "image": "macos-sequoia-15.6-xcode-26.2",
         "node": "20.18.0"
-      }
+      },
+      "channel": "production"
     },
     "development-simulator": {
       "developmentClient": true,
@@ -35,7 +38,8 @@
         "image": "macos-sequoia-15.6-xcode-26.2",
         "node": "20.18.0"
       },
-      "environment": "development"
+      "environment": "development",
+      "channel": "development-simulator"
     }
   },
   "submit": {
