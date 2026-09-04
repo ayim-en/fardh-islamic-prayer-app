@@ -10,7 +10,14 @@ import Animated from "react-native-reanimated";
 import { AnimatedCrossfadeImage } from "./AnimatedCrossfadeImage";
 import { AnimatedTintIcon } from "./AnimatedTintIcon";
 
-const { height } = Dimensions.get("window");
+const { height, width } = Dimensions.get("window");
+
+// The pill is absolutely positioned, so nothing bounds it on the right and
+// adjustsFontSizeToFit had no frame to shrink against — a long reverse-geocoded
+// name rendered at full size and ran under the refresh button instead of
+// scaling down. Cap it short of that button: 24pt inset each side, a 46pt
+// button (22pt icon + p-3), and 16pt of clearance between the two.
+const LOCATION_PILL_MAX_WIDTH = width - 110;
 
 interface QiblaHeaderProps {
   qiblaDirection: number | null;
@@ -49,7 +56,7 @@ export const QiblaHeader = ({
       <View className="absolute top-16 left-6">
         <Animated.View
           className="flex-row items-center gap-2 rounded-full px-4 py-2"
-          style={animatedPillBgStyle}
+          style={[animatedPillBgStyle, { maxWidth: LOCATION_PILL_MAX_WIDTH }]}
         >
           <AnimatedTintIcon
             source={require("../assets/images/prayer-pro-icons/home-page/icon-location.png")}
@@ -61,6 +68,7 @@ export const QiblaHeader = ({
             style={[animatedTextStyle, { flexShrink: 1 }]}
             numberOfLines={1}
             adjustsFontSizeToFit
+            minimumFontScale={0.7}
           >
             {locationName}
           </Animated.Text>

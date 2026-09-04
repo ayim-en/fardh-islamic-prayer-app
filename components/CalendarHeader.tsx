@@ -174,6 +174,7 @@ export const CalendarHeader = ({
           ]}
           numberOfLines={1}
           adjustsFontSizeToFit
+          minimumFontScale={0.7}
         >
           {labels.leading || " "}
         </Text>
@@ -196,6 +197,7 @@ export const CalendarHeader = ({
           ]}
           numberOfLines={1}
           adjustsFontSizeToFit
+          minimumFontScale={0.7}
         >
           {labels.trailing || " "}
         </Text>

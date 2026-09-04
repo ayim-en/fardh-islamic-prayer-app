@@ -781,6 +781,7 @@ export default function SettingsHome() {
           }}
           numberOfLines={1}
           adjustsFontSizeToFit
+          minimumFontScale={0.7}
         >
           Settings
         </Animated.Text>

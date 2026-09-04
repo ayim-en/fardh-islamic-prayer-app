@@ -142,6 +142,7 @@ export const NextKeyDateStrip = ({
               style={nameStyle}
               numberOfLines={1}
               adjustsFontSizeToFit
+              minimumFontScale={0.7}
             >
               {nextKeyDate!.name}
             </Animated.Text>

@@ -234,6 +234,7 @@ export const MonthGridPager = forwardRef<MonthGridPagerRef, MonthGridPagerProps>
               style={titleStyle}
               numberOfLines={1}
               adjustsFontSizeToFit
+              minimumFontScale={0.7}
             >
               {monthLabels.leading}
             </Animated.Text>
@@ -242,6 +243,7 @@ export const MonthGridPager = forwardRef<MonthGridPagerRef, MonthGridPagerProps>
               style={spanStyle}
               numberOfLines={1}
               adjustsFontSizeToFit
+              minimumFontScale={0.7}
             >
               {monthLabels.trailing}
             </Animated.Text>

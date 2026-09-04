@@ -51,16 +51,23 @@ export const PrayerHeader = ({
         className="absolute top-0 left-0 right-0 justify-center items-center"
         style={{ height: panelHeight, paddingTop: 24 }}
       >
+        {/* adjustsFontSizeToFit needs a deterministic frame to scale against.
+            As an auto-width flex child this collapsed to ~10px on larger
+            screens, so the width is pinned the same way the clock below is,
+            and minimumFontScale floors the shrink at something readable. */}
         <Text
           className="font-extrabold text-4xl text-white"
           style={{
             textShadowColor: "rgba(0,0,0,0.4)",
             textShadowOffset: { width: 0, height: 2 },
             textShadowRadius: 4,
+            width: "100%",
+            textAlign: "center",
             paddingHorizontal: 16,
           }}
           numberOfLines={1}
           adjustsFontSizeToFit
+          minimumFontScale={0.7}
         >
           {currentPrayer
             ? currentPrayer.prayer === "Sunrise"
@@ -80,6 +87,7 @@ export const PrayerHeader = ({
           }}
           numberOfLines={1}
           adjustsFontSizeToFit
+          minimumFontScale={0.5}
         >
           {currentPrayer ? formatTimeWithPreference(currentPrayer.time, timeFormat) : "--:--"}
         </Text>

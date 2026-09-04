@@ -114,8 +114,10 @@ export const DayCell = memo(function DayCell({
         ]}
         numberOfLines={1}
         // A leading Hijri label carries "1 Rab II" rather than a bare numeral;
-        // shrink to fit rather than clipping if a column runs narrow.
+        // shrink to fit rather than clipping if a column runs narrow. The width
+        // below keeps that shrink local to this cell — see the sheet.
         adjustsFontSizeToFit
+        minimumFontScale={0.6}
       >
         {labels.leading}
       </Animated.Text>
@@ -131,7 +133,12 @@ export const DayCell = memo(function DayCell({
           trailingIsAccented && sheet.trailingStrong,
         ]}
         numberOfLines={1}
-        adjustsFontSizeToFit
+        // Deliberately NOT adjustsFontSizeToFit. In this slot it shrank every
+        // label in the week to the same illegible size whenever one cell held a
+        // month boundary ("1 Rab II"), rather than shrinking just that cell.
+        // "1 Rab II"/"1 Jum II" are the widest labels the grid can produce and
+        // both fit the column unaided down to the narrowest supported phone, so
+        // the fitting bought nothing and cost the whole row.
       >
         {labels.trailing}
       </Animated.Text>
@@ -146,10 +153,16 @@ const sheet = StyleSheet.create({
   leading: {
     fontWeight: "700",
     fontVariant: ["tabular-nums"],
+    // Gives adjustsFontSizeToFit a frame that is the column, so a long label
+    // scales against its own cell instead of against auto-sized content.
+    width: "100%",
+    textAlign: "center",
   },
   trailing: {
     fontWeight: "600",
     fontVariant: ["tabular-nums"],
+    width: "100%",
+    textAlign: "center",
   },
   trailingStrong: {
     fontWeight: "700",

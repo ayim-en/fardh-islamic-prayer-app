@@ -198,6 +198,7 @@ export const PrayerCarousel = forwardRef<
                       <Animated.Text
                         numberOfLines={1}
                         adjustsFontSizeToFit
+                        minimumFontScale={0.7}
                         style={[
                           {
                             fontSize: 18,
